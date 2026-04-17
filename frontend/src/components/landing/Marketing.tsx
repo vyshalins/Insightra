@@ -14,8 +14,8 @@ export function MarketingLandingAbove() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"
-                fill="#ffe17c"
-                stroke="#ffe17c"
+                fill="var(--mw-accent)"
+                stroke="var(--mw-accent)"
                 strokeWidth="1.2"
                 strokeLinejoin="miter"
               />
@@ -27,10 +27,10 @@ export function MarketingLandingAbove() {
           <a href="#features">Features</a>
           <a href="#how">How it works</a>
           <a href="#personas">Personas</a>
-          <Link to="/app/voice">Workspace</Link>
+          <Link to="/app/voice/overview">Workspace</Link>
         </nav>
         <div className="nb-nav__cta">
-          <Link className="nb-btn nb-btn--push" to="/app/voice">
+          <Link className="nb-btn nb-btn--push" to="/app/voice/overview">
             Open workspace
           </Link>
         </div>
@@ -51,10 +51,10 @@ export function MarketingLandingAbove() {
                 urgency so your team can act fast.
               </p>
               <div className="nb-hero__ctas">
-                <Link className="nb-btn nb-btn--push" to="/app/voice">
+                <Link className="nb-btn nb-btn--push" to="/app/voice/overview">
                   Analyze voice
                 </Link>
-                <Link className="nb-btn nb-btn--secondary" to="/app/data">
+                <Link className="nb-btn nb-btn--secondary" to="/app/data/overview">
                   Ingest reviews
                 </Link>
               </div>
@@ -241,7 +241,7 @@ export function MarketingLandingBelow() {
     <>
       <section className="nb-cta-band nb-yellow-dots">
         <h2 className="nb-heading">Ready to break the noise?</h2>
-        <Link className="nb-btn nb-btn--push" to="/app/voice">
+        <Link className="nb-btn nb-btn--push" to="/app/voice/overview">
           Open workspace
         </Link>
       </section>
@@ -254,7 +254,7 @@ export function MarketingLandingBelow() {
                 <a href="#features">Features</a>
               </li>
               <li>
-                <Link to="/app/voice">Workspace</Link>
+                <Link to="/app/voice/overview">Workspace</Link>
               </li>
               <li>
                 <a href="#how">Workflow</a>

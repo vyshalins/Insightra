@@ -8,9 +8,9 @@
   min-width: 0;
   overflow-x: clip;
   overflow-y: visible;
-  background: var(--nb-white);
-  border-top: 2px solid var(--nb-black);
-  border-bottom: 2px solid var(--nb-black);
+  background: var(--mw-canvas);
+  border-top: none;
+  border-bottom: none;
 }
 
 .nb-workspace {

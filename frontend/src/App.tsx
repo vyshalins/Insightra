@@ -11,6 +11,7 @@ import VoiceTrendsPage from './voice-workspace/pages/VoiceTrendsPage'
 import VoiceBiasPage from './voice-workspace/pages/VoiceBiasPage'
 import VoiceAspectSentimentPage from './voice-workspace/pages/VoiceAspectSentimentPage'
 import VoiceRecommendationsPage from './voice-workspace/pages/VoiceRecommendationsPage'
+import VoiceOverviewPage from './voice-workspace/pages/VoiceOverviewPage'
 import { DataWorkspaceLayout } from './data-workspace/DataWorkspaceLayout'
 import DataIngestPage from './data-workspace/pages/DataIngestPage'
 import DataExploreFullPage from './data-workspace/pages/DataExploreFullPage'
@@ -21,15 +22,17 @@ import DataTrendsPage from './data-workspace/pages/DataTrendsPage'
 import DataBiasPage from './data-workspace/pages/DataBiasPage'
 import DataAspectSentimentPage from './data-workspace/pages/DataAspectSentimentPage'
 import DataRecommendationsPage from './data-workspace/pages/DataRecommendationsPage'
+import DataOverviewPage from './data-workspace/pages/DataOverviewPage'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/app" element={<FeaturesLayout />}>
-        <Route index element={<Navigate to="voice" replace />} />
+        <Route index element={<Navigate to="voice/overview" replace />} />
         <Route path="voice" element={<VoiceWorkspaceLayout />}>
-          <Route index element={<Navigate to="ingest" replace />} />
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<VoiceOverviewPage />} />
           <Route path="ingest" element={<VoiceIngestPage />} />
           <Route path="explore/full" element={<VoiceExploreFullPage />} />
           <Route path="explore/preprocessed" element={<VoiceExplorePreprocessedPage />} />
@@ -41,7 +44,8 @@ export default function App() {
           <Route path="decision/recommendations" element={<VoiceRecommendationsPage />} />
         </Route>
         <Route path="data" element={<DataWorkspaceLayout />}>
-          <Route index element={<Navigate to="ingest" replace />} />
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<DataOverviewPage />} />
           <Route path="ingest" element={<DataIngestPage />} />
           <Route path="explore/full" element={<DataExploreFullPage />} />
           <Route path="explore/preprocessed" element={<DataExplorePreprocessedPage />} />

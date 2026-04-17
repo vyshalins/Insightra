@@ -16,6 +16,16 @@ function subLink(to: string, label: string) {
 export function VoicePipelineSidebar() {
   return (
     <nav className="features-pipeline" aria-label="Voice analysis pipeline">
+      <div className="features-pipeline__overview">
+        <NavLink
+          to="/app/voice/overview"
+          className={({ isActive }) =>
+            `features-pipeline__sublink features-pipeline__overview-link ${isActive ? 'features-pipeline__sublink--active' : ''}`
+          }
+        >
+          Overview
+        </NavLink>
+      </div>
       <details className="features-pipeline__group" open>
         <summary className="features-pipeline__summary">Data exploration</summary>
         <div className="features-pipeline__links">
