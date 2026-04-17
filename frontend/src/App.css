@@ -6,6 +6,22 @@
   gap: 1rem;
 }
 
+.app-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.app-tab-btn {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.app-tab-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
 header h1 {
   margin: 0 0 0.5rem;
 }
@@ -20,6 +36,10 @@ header p {
   border-radius: 0.75rem;
   padding: 1rem;
   background: #ffffff;
+}
+
+.card h2 {
+  margin-top: 0;
 }
 
 .controls {

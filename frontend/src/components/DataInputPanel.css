@@ -1,0 +1,167 @@
+.data-input-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.mode-tab {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.mode-tab.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.mode-card {
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+  background: #f9fafb;
+}
+
+.mode-card label {
+  font-weight: 600;
+}
+
+.mode-card textarea,
+.mode-card input,
+.dataset-controls input,
+.dataset-controls select {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font: inherit;
+}
+
+.mode-hint,
+.selected-input {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.mode-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.secondary-btn {
+  background: #1f2937;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 1rem;
+}
+
+.summary-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+}
+
+.summary-card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.summary-card p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.source-badge {
+  display: inline-block;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.dataset-controls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 1rem;
+  align-items: end;
+}
+
+.dataset-controls label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.dataset-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.table-wrap table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table-wrap th,
+.table-wrap td {
+  padding: 0.6rem;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table-wrap th {
+  background: #f8fafc;
+}
+
+.pagination {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.raw-json-section {
+  margin-top: 1rem;
+}
+
+.raw-json {
+  margin: 0.75rem 0 0;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  max-height: 380px;
+  overflow: auto;
+  background: #111827;
+  color: #e5e7eb;
+  font-size: 0.85rem;
+}
