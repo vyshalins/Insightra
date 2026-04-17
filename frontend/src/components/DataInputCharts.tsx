@@ -15,14 +15,22 @@ import {
 export type NameValuePoint = { name: string; value: number }
 export type TokenCountPoint = { token: string; count: number }
 
-const CHART_COLORS = [
-  'var(--chart-1)',
-  'var(--chart-2)',
-  'var(--chart-3)',
-  'var(--chart-4)',
-  'var(--color-danger)',
-  'var(--color-badge-yes-fg)',
-]
+const CHART_FILLS = ['#171e19', '#b7c6c2', '#ffe17c', '#272727']
+
+const tooltipStyle = {
+  backgroundColor: '#ffffff',
+  border: '2px solid #000000',
+  borderRadius: 8,
+  boxShadow: 'none',
+  color: '#000000',
+  fontWeight: 600,
+  fontSize: 12,
+} as const
+
+const axisTick = { fill: '#272727', fontSize: 11, fontWeight: 600 }
+
+const barChartMargin = { top: 20, right: 12, left: 6, bottom: 8 }
+const pieChartMargin = { top: 16, right: 16, left: 16, bottom: 16 }
 
 type DataInputChartsProps = {
   languageChartData: NameValuePoint[]
@@ -55,12 +63,12 @@ function DataInputCharts({
             <ChartEmpty message="No language data for the current filter." />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={languageChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
-                <XAxis dataKey="name" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }} />
-                <Bar dataKey="value" fill="var(--chart-1)" radius={[8, 8, 0, 0]} />
+              <BarChart data={languageChartData} margin={barChartMargin}>
+                <CartesianGrid stroke="#272727" strokeWidth={1} vertical={false} />
+                <XAxis dataKey="name" tick={axisTick} axisLine={{ stroke: '#000000', strokeWidth: 2 }} tickLine={{ stroke: '#000000' }} />
+                <YAxis allowDecimals={false} tick={axisTick} axisLine={{ stroke: '#000000', strokeWidth: 2 }} tickLine={{ stroke: '#000000' }} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="value" fill="#171e19" radius={[0, 0, 0, 0]} stroke="#000000" strokeWidth={2} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -74,19 +82,21 @@ function DataInputCharts({
             <ChartEmpty message="No translation breakdown for the current filter." />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={pieChartMargin}>
                 <Pie
                   data={translationChartData}
                   dataKey="value"
                   nameKey="name"
                   outerRadius={90}
-                  label
+                  label={{ fill: '#000000', fontSize: 12, fontWeight: 700 }}
+                  stroke="#000000"
+                  strokeWidth={2}
                 >
                   {translationChartData.map((entry, index) => (
-                    <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    <Cell key={entry.name} fill={CHART_FILLS[index % CHART_FILLS.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }} />
+                <Tooltip contentStyle={tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -100,12 +110,12 @@ function DataInputCharts({
             <ChartEmpty message="No quality metrics to display yet." />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={qualityChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
-                <XAxis dataKey="name" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }} />
-                <Bar dataKey="value" fill="var(--chart-3)" radius={[8, 8, 0, 0]} />
+              <BarChart data={qualityChartData} margin={barChartMargin}>
+                <CartesianGrid stroke="#272727" strokeWidth={1} vertical={false} />
+                <XAxis dataKey="name" tick={axisTick} axisLine={{ stroke: '#000000', strokeWidth: 2 }} tickLine={{ stroke: '#000000' }} />
+                <YAxis allowDecimals={false} tick={axisTick} axisLine={{ stroke: '#000000', strokeWidth: 2 }} tickLine={{ stroke: '#000000' }} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="value" fill="#b7c6c2" radius={[0, 0, 0, 0]} stroke="#000000" strokeWidth={2} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -119,12 +129,12 @@ function DataInputCharts({
             <ChartEmpty message="No token frequency data for the current filter." />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topTokenData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
-                <XAxis dataKey="token" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }} />
-                <Bar dataKey="count" fill="var(--chart-2)" radius={[8, 8, 0, 0]} />
+              <BarChart data={topTokenData} margin={barChartMargin}>
+                <CartesianGrid stroke="#272727" strokeWidth={1} vertical={false} />
+                <XAxis dataKey="token" tick={axisTick} axisLine={{ stroke: '#000000', strokeWidth: 2 }} tickLine={{ stroke: '#000000' }} />
+                <YAxis allowDecimals={false} tick={axisTick} axisLine={{ stroke: '#000000', strokeWidth: 2 }} tickLine={{ stroke: '#000000' }} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="count" fill="#ffe17c" radius={[0, 0, 0, 0]} stroke="#000000" strokeWidth={2} />
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -29,6 +29,7 @@ Unified review records: `review_id`, `text`, `source`, `timestamp`, `product_id`
 | `POST` | `/upload/analyze-fakes` | JSON body: either `{"reviews": [<ReviewRecord>, ...]}` from a prior ingestion response, or `{"session_id": "<id>"}` to score normalized rows from that chunk session (capped by `FAKE_ANALYZE_MAX_ROWS`) |
 | `POST` | `/upload/analyze-insights` | Same JSON shape as analyze-fakes: trends across two time windows, urgency index, bias-adjusted sentiment, recommendations (capped by `INSIGHTS_MAX_ROWS`) |
 | `POST` | `/fetch/youtube` | JSON body `{"url": "<youtube url or video id>"}` — requires `YOUTUBE_API_KEY` |
+| `WebSocket` | `/ws/review-stream` | Query: `session_id` (required), `interval_ms` (optional, 50–60000, default 1500). Replays all normalized reviews from that chunk session as JSON: `{"type":"review","review":{...}}`, then `{"type":"done","count":N}`. Use `ws://` or `wss://` on the same host/port as the HTTP API (the Vite app maps this from `VITE_API_BASE_URL`). |
 
 YouTube: set environment variable `YOUTUBE_API_KEY` before calling `/fetch/youtube`.
 

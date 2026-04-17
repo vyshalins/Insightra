@@ -89,6 +89,24 @@ export type InsightsResponse = {
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:8000'
 
+/**
+ * WebSocket URL for simulated live replay (`/ws/review-stream`).
+ * Uses the same host as `VITE_API_BASE_URL`, switching http→ws and https→wss.
+ */
+export function getReviewStreamWsUrl(sessionId: string, intervalMs: number): string {
+  const trimmed = API_BASE_URL.replace(/\/$/, '')
+  const wsRoot = trimmed.startsWith('https://')
+    ? `wss://${trimmed.slice('https://'.length)}`
+    : trimmed.startsWith('http://')
+      ? `ws://${trimmed.slice('http://'.length)}`
+      : `ws://${trimmed}`
+  const base = wsRoot.endsWith('/') ? wsRoot : `${wsRoot}/`
+  const url = new URL('/ws/review-stream', base)
+  url.searchParams.set('session_id', sessionId)
+  url.searchParams.set('interval_ms', String(intervalMs))
+  return url.toString()
+}
+
 async function parseApiError(response: Response): Promise<never> {
   let message = `Request failed with status ${response.status}`
   if (!response.ok) {

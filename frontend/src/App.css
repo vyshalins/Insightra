@@ -1,53 +1,69 @@
-.app {
-  width: min(900px, 100%);
+#app-main {
+  scroll-margin-top: 0;
+}
+
+.nb-workspace-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  overflow-y: visible;
+  background: var(--nb-white);
+  border-top: 2px solid var(--nb-black);
+  border-bottom: 2px solid var(--nb-black);
+}
+
+.nb-workspace {
+  padding-top: clamp(2.5rem, 5vw, 3.5rem);
+  padding-bottom: clamp(2.5rem, 5vw, 3.5rem);
+}
+
+.nb-workspace__inner {
+  width: 100%;
+  max-width: min(920px, 100%);
+  min-width: 0;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-3) var(--space-5);
+  padding: 0 clamp(1.25rem, 4vw, 2rem);
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* Data tab: inner was still capped at 900px; widen so tables and insights use the viewport */
+.nb-workspace-wrap--wide .nb-workspace__inner {
+  max-width: min(1360px, 100%);
+}
+
+.nb-workspace__head {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.nb-workspace__title {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+}
+
+.nb-workspace__sub {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--nb-gray-mid);
+  font-size: 0.95rem;
+}
+
+.nb-panels {
   display: grid;
   gap: var(--space-3);
+  min-width: 0;
+  max-width: 100%;
 }
 
-.app.app--wide {
-  width: min(1280px, 100%);
+.nb-work-card {
+  padding: var(--space-4);
 }
 
-.app-tabs {
-  display: flex;
-  gap: var(--space-1);
-  flex-wrap: wrap;
-}
-
-.app-tab-btn {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border: 1px solid var(--color-border-subtle);
-}
-
-.app-tab-btn.active {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  border-color: var(--color-primary);
-}
-
-header h1 {
-  margin: 0 0 var(--space-1);
-  letter-spacing: -0.02em;
-}
-
-header p {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-
-.card {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-}
-
-.card h2 {
-  margin-top: 0;
+.nb-work-card__title {
+  margin: 0 0 var(--space-3);
+  font-size: 1.35rem;
 }
 
 .controls {
@@ -56,35 +72,11 @@ header p {
 }
 
 .file-label {
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .file-name {
   margin: var(--space-2) 0;
-}
-
-button {
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 1rem;
-  font-size: 0.95rem;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-button:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .results-grid {
@@ -93,15 +85,31 @@ button:disabled {
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
 
+.nb-result-block {
+  border: 2px solid var(--nb-black);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--nb-gray-soft);
+}
+
 .results-grid h3 {
-  margin-bottom: var(--space-1);
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-heading);
+  font-size: 1rem;
+}
+
+.results-grid p,
+.results-grid ul {
+  margin: 0;
 }
 
 .error-text {
   color: var(--color-danger);
-  margin: var(--space-1) 0 0;
+  margin: var(--space-2) 0 0;
+  font-weight: 700;
 }
 
 .empty-state {
-  color: var(--color-text-muted);
+  color: var(--nb-gray-mid);
+  margin: 0;
 }

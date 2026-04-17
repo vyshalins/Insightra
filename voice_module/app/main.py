@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
+from routes.stream import router as stream_router
 from routes.upload import router as upload_router
 from routes.youtube import router as youtube_router
 from transcribe import transcribe_audio
@@ -45,6 +46,7 @@ app.add_middleware(
 
 app.include_router(upload_router)
 app.include_router(youtube_router)
+app.include_router(stream_router)
 
 UPLOAD_FOLDER = "temp"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
