@@ -118,6 +118,7 @@ def normalize_dataframe(
         ]
 
     for item in sentence_records:
+        pre = item["preprocessed"]
         reviews.append(
             ReviewRecord(
                 review_id=str(uuid.uuid4()),
@@ -128,6 +129,11 @@ def normalize_dataframe(
                 original_text=item["original_text"],
                 detected_language=item["detected_language"],
                 translated=item["translated"],
+                preprocess_sentiment=pre.preprocess_sentiment,
+                preprocess_sarcastic=pre.preprocess_sarcastic,
+                preprocess_ambiguous=pre.preprocess_ambiguous,
+                preprocess_meaning=pre.preprocess_meaning,
+                preprocess_confidence=pre.preprocess_confidence,
             )
         )
 

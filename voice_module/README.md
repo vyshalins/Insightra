@@ -60,6 +60,8 @@ Environment variables (all optional unless noted):
 
 Time-bucketed lexicon trends (packaging, delivery, quality, battery, price, service), TextBlob sentiment, optional fake-rate in the **current** window, weighted **urgency score** (0–100), Bayesian-shrunk **adjusted sentiment**, and **recommendations** (Groq JSON list when `GROQ_API_KEY` is set; else templates).
 
+The response also includes **`aspect_sentiment`**: sentence-level splits of each review’s `text`, **lexicon** feature hits per sentence (same buckets as trends), and **TextBlob polarity** averaged per feature within each window (true aspect-style when each ingested row is one sentence; multi-aspect in one row still splits on sentence boundaries). Optional **Groq** can batch-refine aspect sentiments on the **current** window. Reviews with **`preprocess_ambiguous`** are skipped for ABSA when `INSIGHTS_ABSA_SKIP_AMBIGUOUS=1` (default); **`preprocess_sarcastic`** dampens polarity for those rows.
+
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `INSIGHTS_MAX_ROWS` | `2000` | Max reviews per request (inline or from `session_id` resolution) |
@@ -71,16 +73,33 @@ Time-bucketed lexicon trends (packaging, delivery, quality, battery, price, serv
 | `INSIGHTS_WEIGHT_FAKE` | `0.2` | Urgency fusion weight |
 | `INSIGHTS_BIAS_STRENGTH` | `12` | Prior strength for sentiment shrinkage toward neutral |
 | `INSIGHTS_MIN_VOLUME_FOR_FULL_WEIGHT` | `30` | Denominator cap for volume confidence |
+| `INSIGHTS_ABSA_SKIP_AMBIGUOUS` | `1` | When `1`, reviews with `preprocess_ambiguous=true` do not contribute to `aspect_sentiment` |
+| `INSIGHTS_ABSA_GROQ` | `0` | Set to `1` for one optional Groq JSON batch on the current window to refine aspect sentiment/confidence |
+| `INSIGHTS_ABSA_GROQ_MAX_REVIEWS` | `12` | Max reviews sent in that batch (truncated text per row) |
+| `INSIGHTS_ABSA_GROQ_MODEL` | falls back to `GROQ_MODEL` / default Groq model | Model id for the ABSA batch call |
 
 ## Preprocessing layer (ingestion pipeline)
 
 All ingestion routes feed the same preprocessing pipeline in this strict order:
 
-1. basic cleaning (lowercase, URL/html removal, whitespace cleanup, emoji aliasing)
+```mermaid
+flowchart TD
+  raw[Raw text]
+  clean[clean_text or light_clean_text]
+  langTrans[groq_detect_and_translate]
+  ctx[Groq context JSON optional]
+  spell[Optional spellcheck]
+  split[split_sentences]
+  dedup[dedupe_exact / dedupe_near]
+  raw --> clean --> langTrans --> ctx --> spell --> split --> dedup
+```
+
+1. **Cleaning** — default: lowercase, URL/html removal, whitespace, emoji aliasing. Optional **`PREPROCESS_LIGHT_CLEAN=1`**: preserves casing; strips URLs and demojizes only (same emoji fallback as default when `emoji` is missing).
 2. language detection (**langdetect** when installed) and English translation (**Groq only for non-English** text when `GROQ_API_KEY` is set; English skips Groq for speed)
-3. spell correction
-4. sentence segmentation
-5. exact + near-duplicate removal
+3. **Optional Groq context** — when **`GROQ_CONTEXT_ENGINE=1`**, a structured JSON pass runs on the post-translation English string **before** spellcheck. When the model returns **`clean_text`**, that string is what spellcheck and sentence splitting run on, so each `ReviewRecord.text` reflects that normalization when present; otherwise the pipeline uses the translated text as today.
+4. spell correction
+5. sentence segmentation
+6. exact + near-duplicate removal
 
 ### Groq (language + translation)
 
@@ -90,6 +109,16 @@ Set in `voice_module/.env` (or the process environment):
 - `GROQ_MODEL` — optional; defaults to `llama-3.1-8b-instant` if unset.
 - `GROQ_LANGDETECT_MIN_CHARS` — optional; default `18`. Shorter cleaned strings are treated as English without calling langdetect or Groq (avoids flaky detection on tiny snippets).
 - `GROQ_SKIP_TRANSLATION_LANGS` — optional; comma-separated ISO 639-1 **base** codes that skip Groq (default `en`). Example: `en` or `en,de` if German should pass through untranslated.
+
+### Groq context engine (nuance layer)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `GROQ_CONTEXT_ENGINE` | `0` | Set to `1` to enable a second Groq JSON pass (sentiment, sarcasm, ambiguity, interpreted meaning, confidence). **Off by default** so installs stay predictable. |
+| `GROQ_CONTEXT_MODEL` | falls back to `GROQ_MODEL`, then `llama-3.1-8b-instant` | Model id for the context call only. |
+| `PREPROCESS_LIGHT_CLEAN` | `0` | Set to `1` for URL strip + demoji only, **preserving casing** (default full `clean_text` unchanged). |
+
+When enabled and Groq returns valid JSON, each sentence row carries optional metadata on **`ReviewRecord`**: `preprocess_sentiment`, `preprocess_sarcastic`, `preprocess_ambiguous`, `preprocess_meaning`, `preprocess_confidence` (0–1, blended with a simple length/punctuation clarity heuristic when the model supplies confidence). If the API key is missing or the call fails, those fields stay `null` and ingestion continues unchanged.
 
 If **`langdetect` is not installed**, behavior matches the legacy path: a **single Groq call** per row does detection plus translation when Groq is configured.
 

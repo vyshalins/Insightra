@@ -35,6 +35,7 @@ export function DataPipelineSidebar() {
         <div className="features-pipeline__links">
           {subLink('/app/data/analytics/trends', 'Trend detection')}
           {subLink('/app/data/analytics/bias', 'Bias and correlation')}
+          {subLink('/app/data/analytics/aspect-sentiment', 'Aspect sentiment')}
         </div>
       </details>
       <details className="features-pipeline__group" open>

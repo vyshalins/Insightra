@@ -10,6 +10,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
+from services.groq_context import groq_review_context
 from services.groq_lang import groq_detect_and_translate
 
 
@@ -21,9 +22,15 @@ class PreprocessedText:
     original_text: str
     detected_language: str
     translated: bool
+    preprocess_sentiment: str | None = None
+    preprocess_sarcastic: bool | None = None
+    preprocess_ambiguous: bool | None = None
+    preprocess_meaning: str | None = None
+    preprocess_confidence: float | None = None
 
 
 _ENABLE_SPELLCHECK = os.getenv("PREPROCESS_ENABLE_SPELLCHECK", "0").strip() == "1"
+_LIGHT_CLEAN = os.getenv("PREPROCESS_LIGHT_CLEAN", "0").strip() == "1"
 _SENTENCE_MODEL: Any = None
 
 
@@ -51,6 +58,21 @@ def clean_text(text: str) -> str:
     t = re.sub(r"(.)\1{2,}", r"\1\1", t)
     t = re.sub(r"\s+", " ", t).strip()
     return t
+
+
+def light_clean_text(text: str) -> str:
+    """Strip URLs and demojize while preserving casing (opt-in via PREPROCESS_LIGHT_CLEAN)."""
+    if not text:
+        return ""
+    t = str(text).strip()
+    t = re.sub(r"http\S+|www\.\S+", " ", t)
+    try:
+        import emoji  # type: ignore[import-not-found]
+
+        t = emoji.demojize(t, language="en")
+    except ImportError:
+        t = re.sub(r"[^\w\s.,!?-]", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
 
 
 def correct_spelling(text: str) -> str:
@@ -95,12 +117,14 @@ def split_sentences(text: str) -> list[str]:
 def preprocess_record(review: dict[str, Any]) -> list[PreprocessedText]:
     """Run strict ordered preprocessing for one review and return sentences."""
     original_text = str(review.get("text", "") or "")
-    cleaned = clean_text(original_text)
+    cleaned = light_clean_text(original_text) if _LIGHT_CLEAN else clean_text(original_text)
     if not cleaned:
         return []
 
     lang, translated_text, translated = groq_detect_and_translate(cleaned)
-    corrected = correct_spelling(translated_text)
+    ctx = groq_review_context(translated_text)
+    base_for_spell = (ctx.clean_text or translated_text).strip() or translated_text
+    corrected = correct_spelling(base_for_spell)
     sentences = split_sentences(corrected)
     if not sentences:
         return []
@@ -111,6 +135,11 @@ def preprocess_record(review: dict[str, Any]) -> list[PreprocessedText]:
             original_text=original_text,
             detected_language=lang,
             translated=translated,
+            preprocess_sentiment=ctx.sentiment,
+            preprocess_sarcastic=ctx.is_sarcastic,
+            preprocess_ambiguous=ctx.is_ambiguous,
+            preprocess_meaning=ctx.interpreted_meaning,
+            preprocess_confidence=ctx.confidence,
         )
         for sentence in sentences
     ]

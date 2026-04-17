@@ -25,6 +25,24 @@ class ReviewRecord(BaseModel):
     translated: bool = Field(
         default=False, description="True when text was translated to English"
     )
+    preprocess_sentiment: str | None = Field(
+        default=None, description="Optional Groq context engine: positive | negative | neutral"
+    )
+    preprocess_sarcastic: bool | None = Field(
+        default=None, description="Optional Groq context: likely sarcastic"
+    )
+    preprocess_ambiguous: bool | None = Field(
+        default=None, description="Optional Groq context: ambiguous wording"
+    )
+    preprocess_meaning: str | None = Field(
+        default=None, description="Optional Groq context: interpreted meaning in plain English"
+    )
+    preprocess_confidence: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Optional Groq context confidence (calibrated with a simple clarity heuristic)",
+    )
 
     @field_validator("text", mode="before")
     @classmethod
@@ -111,6 +129,37 @@ class InsightsMeta(BaseModel):
     notes: str = ""
 
 
+class AspectSentimentFeature(BaseModel):
+    """Lexicon-matched aspect with sentence-level TextBlob polarity aggregate."""
+
+    feature: str
+    sentiment_label: str = Field(description="positive | negative | neutral (from mean polarity)")
+    mean_polarity: float = Field(ge=-1.0, le=1.0, description="Mean sentence polarity for hits of this feature")
+    sample_count: int = Field(ge=0, description="Number of sentence-level feature hits in window")
+    confidence: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Heuristic confidence; blended with Groq when INSIGHTS_ABSA_GROQ=1",
+    )
+
+
+class AspectSentimentWindows(BaseModel):
+    """Aspect-based sentiment for previous vs current insight windows."""
+
+    previous: list[AspectSentimentFeature] = Field(default_factory=list)
+    current: list[AspectSentimentFeature] = Field(default_factory=list)
+    groq_refined: bool = Field(
+        default=False,
+        description="True when optional Groq batch refined current-window aspect confidences",
+    )
+    excluded_ambiguous_count: int = Field(
+        default=0,
+        ge=0,
+        description="Reviews skipped for ABSA when preprocess_ambiguous and skip flag is on",
+    )
+
+
 class InsightsResponse(BaseModel):
     """Trends, urgency, bias-adjusted sentiment, and recommendations."""
 
@@ -121,6 +170,10 @@ class InsightsResponse(BaseModel):
     bias: BiasSummary
     recommendations: list[str] = Field(default_factory=list)
     meta: InsightsMeta = Field(default_factory=InsightsMeta)
+    aspect_sentiment: AspectSentimentWindows = Field(
+        default_factory=AspectSentimentWindows,
+        description="Sentence-level lexicon aspects with polarity; optional Groq refinement",
+    )
 
 
 class IngestionResponse(BaseModel):

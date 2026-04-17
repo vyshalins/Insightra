@@ -97,7 +97,6 @@ export type DataWorkspaceContextValue = {
     topTokenData: { token: string; count: number }[]
   }
   fakeByReviewId: Map<string, FakeReviewResult>
-  fakeSummary: { analyzed: number; fakes: number; avgRisk: number } | null
   insightsHasZScore: boolean
   resetModeInputs: (targetMode: InputMode) => void
   handleSubmit: () => Promise<void>
@@ -248,16 +247,6 @@ export function DataWorkspaceProvider({ children }: { children: ReactNode }) {
   const paginatedRecords = filteredAndSortedRecords.slice(pageStart, pageStart + PAGE_SIZE)
   const previewRecords = filteredAndSortedRecords.slice(0, 20)
   const allRecords = result?.reviews ?? []
-
-  const fakeSummary = useMemo(() => {
-    if (!fakeResults?.length) {
-      return null
-    }
-    const fakes = fakeResults.filter((r) => r.is_fake).length
-    const avgRisk =
-      fakeResults.reduce((acc, r) => acc + r.fake_confidence, 0) / fakeResults.length
-    return { analyzed: fakeResults.length, fakes, avgRisk }
-  }, [fakeResults])
 
   const handleAnalyzeFakes = useCallback(async () => {
     if (!filteredAndSortedRecords.length) {
@@ -742,7 +731,6 @@ export function DataWorkspaceProvider({ children }: { children: ReactNode }) {
     allRecords,
     metrics,
     fakeByReviewId,
-    fakeSummary,
     insightsHasZScore,
     resetModeInputs,
     handleSubmit,

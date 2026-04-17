@@ -5,11 +5,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import services.groq_lang as groq_lang
+from services.groq_context import GroqContextOutput, _CONTEXT_CACHE
 from services.preprocessing import (
     PreprocessedText,
     clean_text,
     dedupe_exact,
     dedupe_near,
+    light_clean_text,
     preprocess_record,
     split_sentences,
 )
@@ -17,6 +19,7 @@ from services.preprocessing import (
 
 def _clear_groq_cache() -> None:
     groq_lang._JSON_CACHE.clear()
+    _CONTEXT_CACHE.clear()
 
 
 def test_clean_text_removes_url_and_normalizes_case() -> None:
@@ -117,3 +120,63 @@ def test_preprocess_record_propagates_groq_metadata() -> None:
     assert out
     assert out[0].detected_language == "es"
     assert out[0].translated is True
+
+
+def test_light_clean_text_preserves_case() -> None:
+    raw = "GREAT Product!!! See https://x.com/foo"
+    out = light_clean_text(raw)
+    assert "GREAT" in out
+    assert "https://x.com/foo" not in out
+
+
+def test_preprocess_record_propagates_groq_context_when_enabled(monkeypatch) -> None:
+    _clear_groq_cache()
+    monkeypatch.setenv("GROQ_CONTEXT_ENGINE", "1")
+    fake_ctx = GroqContextOutput(
+        clean_text="Normalized review text here.",
+        sentiment="negative",
+        is_sarcastic=False,
+        is_ambiguous=True,
+        interpreted_meaning="Customer is upset about delay.",
+        confidence=0.82,
+    )
+    with patch(
+        "services.preprocessing.groq_detect_and_translate",
+        return_value=("en", "bad service late", False),
+    ):
+        with patch("services.preprocessing.groq_review_context", return_value=fake_ctx):
+            out = preprocess_record({"text": "BAD service LATE"})
+    assert out
+    assert out[0].preprocess_sentiment == "negative"
+    assert out[0].preprocess_ambiguous is True
+    assert out[0].preprocess_meaning == "Customer is upset about delay."
+    assert out[0].preprocess_confidence == 0.82
+    assert "normalized" in out[0].sentence.lower() or "review" in out[0].sentence.lower()
+
+
+def test_preprocess_record_context_engine_off_leaves_metadata_none(monkeypatch) -> None:
+    _clear_groq_cache()
+    monkeypatch.delenv("GROQ_CONTEXT_ENGINE", raising=False)
+    with patch(
+        "services.preprocessing.groq_detect_and_translate",
+        return_value=("en", "hello world. second sentence.", False),
+    ):
+        out = preprocess_record({"text": "Hello world. Second sentence."})
+    assert out
+    assert out[0].preprocess_sentiment is None
+    assert out[0].preprocess_sarcastic is None
+    assert out[0].preprocess_ambiguous is None
+    assert out[0].preprocess_meaning is None
+    assert out[0].preprocess_confidence is None
+
+
+def test_groq_review_context_offline_with_engine_on(monkeypatch) -> None:
+    _clear_groq_cache()
+    monkeypatch.setenv("GROQ_CONTEXT_ENGINE", "1")
+    from services import groq_context as gc
+
+    with patch.object(gc, "_get_groq_client", return_value=None):
+        out = gc.groq_review_context("some english text here enough")
+    assert out.clean_text is None
+    assert out.sentiment is None
+    assert out.confidence is None

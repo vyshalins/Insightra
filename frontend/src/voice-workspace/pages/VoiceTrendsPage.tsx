@@ -1,3 +1,7 @@
+import { InsightKeyCallout } from '../../components/InsightKeyCallout'
+import { InsightRecommendationStrip } from '../../components/InsightRecommendationStrip'
+import { isCriticalTrendRow, topTrendHeadline } from '../../components/insightNarratives'
+import { TrendTopMoversChart } from '../../components/TrendTopMoversChart'
 import { INSIGHTS_MAX_ROWS } from '../../data-workspace/constants'
 import { useVoiceWorkspace } from '../VoiceWorkspaceContext'
 import { EmptyVoiceCta } from '../EmptyVoiceCta'
@@ -46,6 +50,10 @@ export default function VoiceTrendsPage() {
         {insightsError ? <p className="error-text">{insightsError}</p> : null}
         {insights ? (
           <div className="insights-body" aria-live="polite">
+            {(() => {
+              const h = topTrendHeadline(insights.trends)
+              return h ? <InsightKeyCallout body={h.body} severity={h.severity} /> : null
+            })()}
             <div className="summary-grid insights-summary-grid">
               <article className="summary-card insights-card-urgency">
                 <h3>Urgency</h3>
@@ -70,6 +78,7 @@ export default function VoiceTrendsPage() {
               · anomaly: {insights.meta.anomaly_mode}
               {insights.meta.notes ? ` · ${insights.meta.notes}` : ''}
             </p>
+            <TrendTopMoversChart trends={insights.trends} />
             <h4 className="insights-subheading">Feature trend table</h4>
             <p className="insights-legend">
               Classification uses change in mention rate (percentage points): under 5% noise, 5–20%
@@ -100,9 +109,13 @@ export default function VoiceTrendsPage() {
                           : clf === 'emerging'
                             ? 'insights-chip insights-chip--emerging'
                             : 'insights-chip insights-chip--noise'
+                      const critical = isCriticalTrendRow(t)
                       return (
-                        <tr key={t.feature}>
-                          <td>{t.feature}</td>
+                        <tr
+                          key={t.feature}
+                          className={critical ? 'insights-table__row--critical' : undefined}
+                        >
+                          <td>{critical ? <strong>{t.feature}</strong> : t.feature}</td>
                           <td>{(t.prev_rate * 100).toFixed(1)}%</td>
                           <td>{(t.current_rate * 100).toFixed(1)}%</td>
                           <td>{(t.delta * 100).toFixed(1)} pp</td>
@@ -136,6 +149,7 @@ export default function VoiceTrendsPage() {
                 </ul>
               </>
             ) : null}
+            <InsightRecommendationStrip recommendations={insights.recommendations} />
           </div>
         ) : null}
       </section>

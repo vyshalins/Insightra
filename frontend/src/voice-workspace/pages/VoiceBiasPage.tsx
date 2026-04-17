@@ -1,6 +1,12 @@
+import { useMemo } from 'react'
+import { BiasSentimentMeters } from '../../components/BiasSentimentMeters'
+import { CorrelationRoadmapCard } from '../../components/CorrelationRoadmapCard'
+import { InsightKeyCallout } from '../../components/InsightKeyCallout'
+import { InsightRecommendationStrip } from '../../components/InsightRecommendationStrip'
+import { biasNarrative } from '../../components/insightNarratives'
 import { INSIGHTS_MAX_ROWS } from '../../data-workspace/constants'
-import { useVoiceWorkspace } from '../VoiceWorkspaceContext'
 import { EmptyVoiceCta } from '../EmptyVoiceCta'
+import { useVoiceWorkspace } from '../VoiceWorkspaceContext'
 
 export default function VoiceBiasPage() {
   const {
@@ -11,6 +17,8 @@ export default function VoiceBiasPage() {
     insightsError,
     handleAnalyzeInsights,
   } = useVoiceWorkspace()
+
+  const biasN = useMemo(() => (insights ? biasNarrative(insights.bias) : null), [insights])
 
   if (!sessions.length) {
     return (
@@ -28,8 +36,8 @@ export default function VoiceBiasPage() {
       <section className="nb-card nb-panel-card">
         <h2 className="nb-panel-card__title">Bias and correlation</h2>
         <p className="mode-hint">
-          Text-window bias metrics on transcripts (max {INSIGHTS_MAX_ROWS}). Tone vs sentiment correlation
-          charts require structured speaker and rating fields not yet returned from voice.
+          Text-window bias metrics on transcripts (max {INSIGHTS_MAX_ROWS}). Compare shrinkage below with
+          emotion labels from capture.
         </p>
         <div className="insights-actions">
           <button
@@ -43,38 +51,40 @@ export default function VoiceBiasPage() {
           </button>
         </div>
         {insightsError ? <p className="error-text">{insightsError}</p> : null}
-        {insights ? (
+        {insights && biasN ? (
           <div className="insights-body" aria-live="polite">
+            <InsightKeyCallout title="Sentiment reality check" body={biasN.body} severity="info" />
             <div className="summary-grid insights-summary-grid">
               <article className="summary-card">
-                <h3>Raw sentiment</h3>
-                <p>{insights.bias.raw_sentiment.toFixed(3)}</p>
-                <p className="insights-subnote">Mean TextBlob polarity (current window)</p>
+                <h3>Raw window</h3>
+                <p className="summary-card__tone">{biasN.rawTone}</p>
+                <p className="insights-subnote">Polarity {insights.bias.raw_sentiment.toFixed(3)}</p>
               </article>
               <article className="summary-card">
-                <h3>Adjusted sentiment</h3>
-                <p>{insights.bias.adjusted_sentiment.toFixed(3)}</p>
-                <p className="insights-subnote">
-                  Shrinkage toward neutral (bias correction); Δ{' '}
-                  {(insights.bias.adjusted_sentiment - insights.bias.raw_sentiment).toFixed(3)}
-                </p>
+                <h3>Adjusted window</h3>
+                <p className="summary-card__tone">{biasN.adjTone}</p>
+                <p className="insights-subnote">Polarity {insights.bias.adjusted_sentiment.toFixed(3)}</p>
               </article>
               <article className="summary-card">
                 <h3>Volume weight</h3>
                 <p>{(insights.bias.volume_weight * 100).toFixed(0)}%</p>
-                <p className="insights-subnote">Confidence from sample size</p>
+                <p className="insights-subnote">Reliability from sample size</p>
               </article>
             </div>
 
-            <h3 className="nb-section-heading">Tone vs sentiment and speaker patterns</h3>
+            <h3 className="nb-section-heading">Sentiment on a scale</h3>
+            <BiasSentimentMeters
+              rawSentiment={insights.bias.raw_sentiment}
+              adjustedSentiment={insights.bias.adjusted_sentiment}
+            />
+
+            <h3 className="nb-section-heading">Speaker and rating correlations</h3>
             <p className="insights-subnote">
-              Compare LLM emotion labels from capture with TextBlob polarity above manually for now.
-              Automated speaker diarization and per-speaker emotion matrices are planned for a future API
-              release.
+              Automated speaker diarization and per-speaker matrices are not in the API yet; use capture
+              emotion labels alongside the meters above.
             </p>
-            <div className="nb-card nb-panel-card" style={{ marginTop: 'var(--space-3)' }}>
-              <p className="empty-state">No speaker-level correlation endpoint configured.</p>
-            </div>
+            <CorrelationRoadmapCard />
+            <InsightRecommendationStrip recommendations={insights.recommendations} />
           </div>
         ) : (
           <p className="empty-state">Run insights to load bias metrics.</p>

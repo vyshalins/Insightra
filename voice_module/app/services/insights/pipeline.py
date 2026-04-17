@@ -12,6 +12,7 @@ from models.schema import (
 )
 from services.fake_detection.pipeline import analyze_reviews
 from services.insights.bias import shrink_mean, volume_weight
+from services.insights.absa import build_aspect_sentiment_windows
 from services.insights.bucketing import split_windows
 from services.insights.features import window_feature_rates
 from services.insights.recommendations import generate_recommendations
@@ -75,6 +76,7 @@ def analyze_insights(reviews: list[ReviewRecord]) -> InsightsResponse:
         "adjusted_sentiment": adjusted,
     }
     recommendations = generate_recommendations(summary, top_preview)
+    aspect_sentiment = build_aspect_sentiment_windows(previous, current)
 
     return InsightsResponse(
         trends=trends,
@@ -88,4 +90,5 @@ def analyze_insights(reviews: list[ReviewRecord]) -> InsightsResponse:
         ),
         recommendations=recommendations,
         meta=meta,
+        aspect_sentiment=aspect_sentiment,
     )

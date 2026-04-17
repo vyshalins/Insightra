@@ -9,6 +9,7 @@ import VoiceFakePage from './voice-workspace/pages/VoiceFakePage'
 import VoiceFeaturesPage from './voice-workspace/pages/VoiceFeaturesPage'
 import VoiceTrendsPage from './voice-workspace/pages/VoiceTrendsPage'
 import VoiceBiasPage from './voice-workspace/pages/VoiceBiasPage'
+import VoiceAspectSentimentPage from './voice-workspace/pages/VoiceAspectSentimentPage'
 import VoiceRecommendationsPage from './voice-workspace/pages/VoiceRecommendationsPage'
 import { DataWorkspaceLayout } from './data-workspace/DataWorkspaceLayout'
 import DataIngestPage from './data-workspace/pages/DataIngestPage'
@@ -18,6 +19,7 @@ import DataFakePage from './data-workspace/pages/DataFakePage'
 import DataFeaturesPage from './data-workspace/pages/DataFeaturesPage'
 import DataTrendsPage from './data-workspace/pages/DataTrendsPage'
 import DataBiasPage from './data-workspace/pages/DataBiasPage'
+import DataAspectSentimentPage from './data-workspace/pages/DataAspectSentimentPage'
 import DataRecommendationsPage from './data-workspace/pages/DataRecommendationsPage'
 
 export default function App() {
@@ -35,6 +37,7 @@ export default function App() {
           <Route path="intelligence/features" element={<VoiceFeaturesPage />} />
           <Route path="analytics/trends" element={<VoiceTrendsPage />} />
           <Route path="analytics/bias" element={<VoiceBiasPage />} />
+          <Route path="analytics/aspect-sentiment" element={<VoiceAspectSentimentPage />} />
           <Route path="decision/recommendations" element={<VoiceRecommendationsPage />} />
         </Route>
         <Route path="data" element={<DataWorkspaceLayout />}>
@@ -46,6 +49,7 @@ export default function App() {
           <Route path="intelligence/features" element={<DataFeaturesPage />} />
           <Route path="analytics/trends" element={<DataTrendsPage />} />
           <Route path="analytics/bias" element={<DataBiasPage />} />
+          <Route path="analytics/aspect-sentiment" element={<DataAspectSentimentPage />} />
           <Route path="decision/recommendations" element={<DataRecommendationsPage />} />
         </Route>
       </Route>

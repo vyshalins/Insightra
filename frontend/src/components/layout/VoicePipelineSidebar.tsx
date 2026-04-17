@@ -35,6 +35,7 @@ export function VoicePipelineSidebar() {
         <div className="features-pipeline__links">
           {subLink('/app/voice/analytics/trends', 'Trend detection')}
           {subLink('/app/voice/analytics/bias', 'Bias and correlation')}
+          {subLink('/app/voice/analytics/aspect-sentiment', 'Aspect sentiment')}
         </div>
       </details>
       <details className="features-pipeline__group" open>

@@ -84,7 +84,7 @@ export function FeaturesLayout() {
                   {isVoiceWorkspace
                     ? 'Capture audio up top, then use the pipeline for transcripts, classification, trends, and actions—same layout as data ingestion.'
                     : isDataWorkspace
-                      ? 'Ingest reviews from the top entry, then move through exploration, intelligence, analytics, and recommendations in the sidebar.'
+                      ? 'Ingest reviews from the top entry, then move through exploration, intelligence, analytics, and recommendations in the sidebar. Run insights on analytics pages to unlock headline callouts and action strips.'
                       : 'Pick Voice analysis or Data ingestion above.'}
                 </p>
               </div>

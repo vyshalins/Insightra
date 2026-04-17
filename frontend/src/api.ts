@@ -14,6 +14,11 @@ export type ReviewRecord = {
   original_text?: string | null
   detected_language?: string | null
   translated?: boolean
+  preprocess_sentiment?: string | null
+  preprocess_sarcastic?: boolean | null
+  preprocess_ambiguous?: boolean | null
+  preprocess_meaning?: string | null
+  preprocess_confidence?: number | null
 }
 
 export type IngestionResponse = {
@@ -76,6 +81,21 @@ export type InsightsMeta = {
   notes: string
 }
 
+export type AspectSentimentFeature = {
+  feature: string
+  sentiment_label: string
+  mean_polarity: number
+  sample_count: number
+  confidence?: number | null
+}
+
+export type AspectSentimentWindows = {
+  previous: AspectSentimentFeature[]
+  current: AspectSentimentFeature[]
+  groq_refined: boolean
+  excluded_ambiguous_count: number
+}
+
 export type InsightsResponse = {
   trends: TrendFeatureResult[]
   urgency_score: number
@@ -84,6 +104,7 @@ export type InsightsResponse = {
   bias: BiasSummary
   recommendations: string[]
   meta: InsightsMeta
+  aspect_sentiment: AspectSentimentWindows
 }
 
 const API_BASE_URL =
