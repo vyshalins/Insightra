@@ -42,6 +42,87 @@ class ReviewRecord(BaseModel):
         return s if s else "unknown"
 
 
+class FakeReviewResult(BaseModel):
+    """Per-review hybrid fake detection output."""
+
+    review_id: str
+    is_fake: bool
+    fake_confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Fused score after rules, optional ML, and similarity boost",
+    )
+    rule_score: float = Field(ge=0.0, le=1.0)
+    ml_fake_prob: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="RoBERTa / HF classifier fake probability when ML enabled",
+    )
+    fake_signals: list[str] = Field(default_factory=list)
+    explanation: str = ""
+    similarity_neighbor: bool = Field(
+        default=False,
+        description="True when SBERT finds a high-similarity neighbor in this batch",
+    )
+
+
+class FakeBatchResponse(BaseModel):
+    """Response from POST /upload/analyze-fakes."""
+
+    results: list[FakeReviewResult]
+    count: int
+
+
+class TrendFeatureResult(BaseModel):
+    """Per-feature trend between two time windows."""
+
+    feature: str
+    prev_rate: float = Field(ge=0.0, le=1.0, description="Fraction of prev window mentioning feature")
+    current_rate: float = Field(ge=0.0, le=1.0, description="Fraction of current window mentioning feature")
+    delta: float = Field(description="current_rate - prev_rate (-1..1)")
+    trend: str = Field(description="stable | spike | drop")
+    classification: str = Field(description="noise | emerging | systemic (by |delta| in pp)")
+    z_score: float | None = Field(default=None, description="Across-feature z-score of |delta| when enabled")
+
+
+class UrgencyItem(BaseModel):
+    """Per-feature urgency derived from trend magnitude."""
+
+    feature: str
+    urgency: str = Field(description="low | medium | high")
+    score: float = Field(ge=0.0, le=100.0)
+    action: str = ""
+
+
+class BiasSummary(BaseModel):
+    """Sentiment shrinkage and volume confidence."""
+
+    raw_sentiment: float = Field(description="Mean polarity in current window (-1..1)")
+    adjusted_sentiment: float = Field(description="Bayesian-shrunk mean toward neutral")
+    volume_weight: float = Field(ge=0.0, le=1.0, description="Reliability weight from sample size")
+
+
+class InsightsMeta(BaseModel):
+    current_window_size: int = 0
+    previous_window_size: int = 0
+    total_input_reviews: int = 0
+    anomaly_mode: str = "none"
+    notes: str = ""
+
+
+class InsightsResponse(BaseModel):
+    """Trends, urgency, bias-adjusted sentiment, and recommendations."""
+
+    trends: list[TrendFeatureResult]
+    urgency_score: float = Field(ge=0.0, le=100.0, description="Global 0-100 urgency index")
+    urgency_level: str = Field(description="low | medium | high")
+    urgency_items: list[UrgencyItem] = Field(default_factory=list)
+    bias: BiasSummary
+    recommendations: list[str] = Field(default_factory=list)
+    meta: InsightsMeta = Field(default_factory=InsightsMeta)
+
+
 class IngestionResponse(BaseModel):
     """Response after parsing + normalization."""
 

@@ -1,26 +1,20 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import {
+  analyzeFakeReviews,
+  analyzeInsights,
   fetchYoutube,
   processNextChunk,
   uploadCsv,
   uploadJson,
   uploadManual,
+  type FakeReviewResult,
+  type InsightsResponse,
   type IngestionResponse,
   type ReviewRecord,
 } from '../api'
 import './DataInputPanel.css'
+
+const DataInputCharts = lazy(() => import('./DataInputCharts'))
 
 type InputMode = 'csv' | 'json' | 'manual' | 'youtube'
 type TranslationFilter = 'all' | 'translated' | 'not_translated'
@@ -30,7 +24,22 @@ const PAGE_SIZE = 20
 const DEFAULT_CHUNK_SIZE = 300
 const MIN_CHUNK_SIZE = 100
 const MAX_CHUNK_SIZE = 1000
-const CHART_COLORS = ['#2563eb', '#0891b2', '#7c3aed', '#f59e0b', '#ef4444', '#10b981']
+/** Matches backend default `FAKE_ANALYZE_MAX_ROWS`. */
+const FAKE_ANALYZE_MAX_ROWS = 2000
+/** Matches backend `INSIGHTS_MAX_ROWS`. */
+const INSIGHTS_MAX_ROWS = 2000
+
+function ChartsSkeleton() {
+  return (
+    <div className="charts-skeleton charts-grid" aria-hidden="true">
+      {[0, 1, 2, 3].map((slot) => (
+        <div key={slot} className="charts-skeleton-card">
+          <div className="charts-skeleton-shimmer" />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function toCsv(records: ReviewRecord[]): string {
   const headers = [
@@ -102,6 +111,25 @@ export function DataInputPanel() {
   const [currentPage, setCurrentPage] = useState(1)
   const [showRawJson, setShowRawJson] = useState(false)
   const [requestedChunkSize, setRequestedChunkSize] = useState(DEFAULT_CHUNK_SIZE)
+  const [fakeResults, setFakeResults] = useState<FakeReviewResult[] | null>(null)
+  const [fakeLoading, setFakeLoading] = useState(false)
+  const [fakeError, setFakeError] = useState<string | null>(null)
+  const [insights, setInsights] = useState<InsightsResponse | null>(null)
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [insightsError, setInsightsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setFakeResults(null)
+    setFakeError(null)
+    setInsights(null)
+    setInsightsError(null)
+  }, [result, filterText, languageFilter, translationFilter, sortBy])
+
+  const fakeByReviewId = useMemo(() => {
+    const map = new Map<string, FakeReviewResult>()
+    fakeResults?.forEach((row) => map.set(row.review_id, row))
+    return map
+  }, [fakeResults])
 
   const resetModeInputs = (targetMode: InputMode) => {
     if (targetMode === 'csv') {
@@ -189,6 +217,92 @@ export function DataInputPanel() {
   const paginatedRecords = filteredAndSortedRecords.slice(pageStart, pageStart + PAGE_SIZE)
   const previewRecords = filteredAndSortedRecords.slice(0, 20)
   const allRecords = result?.reviews ?? []
+
+  const fakeSummary = useMemo(() => {
+    if (!fakeResults?.length) {
+      return null
+    }
+    const fakes = fakeResults.filter((r) => r.is_fake).length
+    const avgRisk =
+      fakeResults.reduce((acc, r) => acc + r.fake_confidence, 0) / fakeResults.length
+    return { analyzed: fakeResults.length, fakes, avgRisk }
+  }, [fakeResults])
+
+  const handleAnalyzeFakes = async () => {
+    if (!filteredAndSortedRecords.length) {
+      return
+    }
+    setFakeError(null)
+    setFakeLoading(true)
+    try {
+      const batch = filteredAndSortedRecords.slice(0, FAKE_ANALYZE_MAX_ROWS)
+      const response = await analyzeFakeReviews(batch)
+      setFakeResults(response.results)
+    } catch (err) {
+      setFakeResults(null)
+      setFakeError(err instanceof Error ? err.message : 'Fake detection failed.')
+    } finally {
+      setFakeLoading(false)
+    }
+  }
+
+  const handleAnalyzeInsights = async () => {
+    if (!filteredAndSortedRecords.length) {
+      return
+    }
+    setInsightsError(null)
+    setInsightsLoading(true)
+    try {
+      const batch = filteredAndSortedRecords.slice(0, INSIGHTS_MAX_ROWS)
+      const response = await analyzeInsights(batch)
+      setInsights(response)
+    } catch (err) {
+      setInsights(null)
+      setInsightsError(err instanceof Error ? err.message : 'Insights request failed.')
+    } finally {
+      setInsightsLoading(false)
+    }
+  }
+
+  const insightsHasZScore = useMemo(
+    () =>
+      insights?.trends.some((t) => t.z_score != null && t.z_score !== undefined) ?? false,
+    [insights],
+  )
+
+  const renderFakeCells = (record: ReviewRecord) => {
+    const fr = fakeByReviewId.get(record.review_id)
+    if (!fr) {
+      return (
+        <>
+          <td className="fake-col">—</td>
+          <td className="fake-col">—</td>
+          <td className="fake-col fake-signals">—</td>
+        </>
+      )
+    }
+    const signalsText =
+      fr.fake_signals.length > 0 ? fr.fake_signals.map((s) => s.replaceAll('_', ' ')).join(', ') : '—'
+    return (
+      <>
+        <td className="fake-col">
+          <span className={`fake-verdict ${fr.is_fake ? 'fake-verdict--fake' : 'fake-verdict--real'}`}>
+            {fr.is_fake ? 'Likely fake' : 'Likely real'}
+          </span>
+        </td>
+        <td className="fake-col" title={fr.explanation}>
+          {(fr.fake_confidence * 100).toFixed(1)}%
+          {fr.ml_fake_prob != null ? (
+            <span className="fake-ml-hint"> (ML {(fr.ml_fake_prob * 100).toFixed(0)}%)</span>
+          ) : null}
+        </td>
+        <td className="fake-col fake-signals" title={fr.explanation}>
+          {signalsText}
+          {fr.similarity_neighbor ? <span className="fake-dup-flag"> · near-dup</span> : null}
+        </td>
+      </>
+    )
+  }
 
   const metrics = useMemo(() => {
     const total = filteredAndSortedRecords.length
@@ -449,7 +563,11 @@ export function DataInputPanel() {
           {(['csv', 'json', 'manual', 'youtube'] as const).map((candidateMode) => (
             <button
               key={candidateMode}
+              id={`ingest-tab-${candidateMode}`}
               type="button"
+              role="tab"
+              aria-selected={mode === candidateMode}
+              aria-controls="ingest-mode-panel"
               className={`mode-tab ${mode === candidateMode ? 'active' : ''}`}
               onClick={() => setMode(candidateMode)}
               disabled={isLoading}
@@ -459,10 +577,17 @@ export function DataInputPanel() {
           ))}
         </div>
 
-        <div className="mode-card">{renderModeInputs()}</div>
+        <div
+          id="ingest-mode-panel"
+          className="mode-card"
+          role="tabpanel"
+          aria-labelledby={`ingest-tab-${mode}`}
+        >
+          {renderModeInputs()}
+        </div>
 
         <div className="mode-actions">
-          <button type="button" onClick={handleSubmit} disabled={isLoading}>
+          <button type="button" onClick={handleSubmit} disabled={isLoading} aria-busy={isLoading}>
             {isLoading ? 'Submitting...' : 'Submit'}
           </button>
           <button
@@ -535,6 +660,7 @@ export function DataInputPanel() {
                 className="secondary-btn"
                 onClick={handleProcessNextChunk}
                 disabled={isLoading || !(result.has_more ?? false) || !result.session_id}
+                aria-busy={isLoading}
               >
                 Process Next Chunk
               </button>
@@ -543,6 +669,7 @@ export function DataInputPanel() {
                 className="secondary-btn"
                 onClick={handleProcessAllRemaining}
                 disabled={isLoading || !(result.has_more ?? false) || !result.session_id}
+                aria-busy={isLoading}
               >
                 Process Remaining
               </button>
@@ -551,6 +678,188 @@ export function DataInputPanel() {
                   ? 'Partial dataset loaded. Process next chunk to continue.'
                   : 'All rows processed for this dataset.'}
               </p>
+            </div>
+
+            <div className="fake-detect-panel">
+              <h3>Fake review detection</h3>
+              <p className="mode-hint">
+                Runs hybrid scoring on the dataset after your filters (max {FAKE_ANALYZE_MAX_ROWS} rows per
+                request). Clear filters to score more rows.
+              </p>
+              <div className="fake-detect-actions">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={handleAnalyzeFakes}
+                  disabled={fakeLoading || filteredAndSortedRecords.length === 0}
+                  aria-busy={fakeLoading}
+                >
+                  {fakeLoading ? 'Analyzing…' : 'Run fake detection'}
+                </button>
+                {fakeSummary ? (
+                  <p className="fake-detect-summary" role="status">
+                    Analyzed {fakeSummary.analyzed}: {fakeSummary.fakes} flagged likely fake · avg risk score{' '}
+                    {(fakeSummary.avgRisk * 100).toFixed(1)}%
+                    {filteredAndSortedRecords.length > FAKE_ANALYZE_MAX_ROWS ? (
+                      <span className="fake-detect-truncate">
+                        {' '}
+                        (only first {FAKE_ANALYZE_MAX_ROWS} filtered rows sent)
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null}
+              </div>
+              {fakeError ? <p className="error-text">{fakeError}</p> : null}
+            </div>
+
+            <div
+              className="insights-panel"
+              role="region"
+              aria-label="Trend and urgency insights"
+            >
+              <h3>Trends and urgency</h3>
+              <p className="mode-hint">
+                Compares the latest window of reviews vs the prior window (lexicon themes, sentiment,
+                optional fake-rate). Uses filtered rows (max {INSIGHTS_MAX_ROWS} per request).
+              </p>
+              <div className="insights-actions">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={handleAnalyzeInsights}
+                  disabled={insightsLoading || filteredAndSortedRecords.length === 0}
+                  aria-busy={insightsLoading}
+                >
+                  {insightsLoading ? 'Computing…' : 'Run insights'}
+                </button>
+              </div>
+              {insightsError ? <p className="error-text">{insightsError}</p> : null}
+              {insights ? (
+                <div className="insights-body" aria-live="polite">
+                  <div className="summary-grid insights-summary-grid">
+                    <article className="summary-card insights-card-urgency">
+                      <h3>Urgency</h3>
+                      <p className="insights-urgency-line">
+                        <span className="insights-urgency-score">{insights.urgency_score.toFixed(1)}</span>
+                        <span
+                          className={`insights-urgency-pill insights-urgency-pill--${insights.urgency_level}`}
+                        >
+                          {insights.urgency_level === 'high'
+                            ? 'Immediate attention'
+                            : insights.urgency_level === 'medium'
+                              ? 'Monitor'
+                              : 'Low priority'}
+                        </span>
+                      </p>
+                      <p className="insights-legend">
+                        Score over 80 suggests immediate ops review; 50–80 monitor; under 50 typically safe
+                        to backlog.
+                      </p>
+                    </article>
+                    <article className="summary-card">
+                      <h3>Raw sentiment</h3>
+                      <p>{insights.bias.raw_sentiment.toFixed(3)}</p>
+                      <p className="insights-subnote">Mean TextBlob polarity (current window)</p>
+                    </article>
+                    <article className="summary-card">
+                      <h3>Adjusted sentiment</h3>
+                      <p>{insights.bias.adjusted_sentiment.toFixed(3)}</p>
+                      <p className="insights-subnote">
+                        Shrinkage toward neutral (bias correction); Δ{' '}
+                        {(insights.bias.adjusted_sentiment - insights.bias.raw_sentiment).toFixed(3)}
+                      </p>
+                    </article>
+                    <article className="summary-card">
+                      <h3>Volume weight</h3>
+                      <p>{(insights.bias.volume_weight * 100).toFixed(0)}%</p>
+                      <p className="insights-subnote">Confidence from sample size</p>
+                    </article>
+                  </div>
+                  <p className="insights-meta">
+                    Windows: prev {insights.meta.previous_window_size} · current{' '}
+                    {insights.meta.current_window_size} · anomaly: {insights.meta.anomaly_mode}
+                    {insights.meta.notes ? ` · ${insights.meta.notes}` : ''}
+                  </p>
+                  <h4 className="insights-subheading">Feature trend table</h4>
+                  <p className="insights-legend">
+                    Classification uses change in mention rate (percentage points): under 5% noise, 5–20%
+                    emerging, over 20% systemic.
+                  </p>
+                  <div className="table-wrap insights-table-wrap">
+                    <table className="insights-table">
+                      <thead>
+                        <tr>
+                          <th>Feature</th>
+                          <th>Prev</th>
+                          <th>Now</th>
+                          <th>Delta</th>
+                          <th>Trend</th>
+                          <th>Severity</th>
+                          {insightsHasZScore ? <th>Z / score</th> : null}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...insights.trends]
+                          .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+                          .slice(0, 8)
+                          .map((t) => {
+                            const clf = t.classification
+                            const chipClass =
+                              clf === 'systemic'
+                                ? 'insights-chip insights-chip--systemic'
+                                : clf === 'emerging'
+                                  ? 'insights-chip insights-chip--emerging'
+                                  : 'insights-chip insights-chip--noise'
+                            return (
+                              <tr key={t.feature}>
+                                <td>{t.feature}</td>
+                                <td>{(t.prev_rate * 100).toFixed(1)}%</td>
+                                <td>{(t.current_rate * 100).toFixed(1)}%</td>
+                                <td>{(t.delta * 100).toFixed(1)} pp</td>
+                                <td>
+                                  <span className={`insights-trend insights-trend--${t.trend}`}>
+                                    {t.trend}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className={chipClass}>{clf}</span>
+                                </td>
+                                {insightsHasZScore ? (
+                                  <td>{t.z_score != null ? t.z_score.toFixed(2) : '—'}</td>
+                                ) : null}
+                              </tr>
+                            )
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {insights.urgency_items.length > 0 ? (
+                    <>
+                      <h4 className="insights-subheading">Urgency by feature</h4>
+                      <ul className="insights-urgency-list">
+                        {insights.urgency_items.map((u) => (
+                          <li key={u.feature}>
+                            <span className={`insights-urgency-pill insights-urgency-pill--${u.urgency}`}>
+                              {u.urgency}
+                            </span>{' '}
+                            <strong>{u.feature}</strong> (score {u.score.toFixed(0)}): {u.action}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
+                  <h4 className="insights-subheading">Recommendations</h4>
+                  {insights.recommendations.length > 0 ? (
+                    <ul className="insights-rec-list">
+                      {insights.recommendations.map((line, i) => (
+                        <li key={`rec-${i}`}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="insights-subnote">No recommendation lines returned.</p>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             <h3>Preprocessing Analytics</h3>
@@ -659,74 +968,14 @@ export function DataInputPanel() {
               </div>
             </div>
 
-            <div className="charts-grid">
-              <article className="chart-card">
-                <h4>Language Distribution</h4>
-                <div className="chart-wrap">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={metrics.languageChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#2563eb" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </article>
-
-              <article className="chart-card">
-                <h4>Translated vs Non-translated</h4>
-                <div className="chart-wrap">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={metrics.translationChartData}
-                        dataKey="value"
-                        nameKey="name"
-                        outerRadius={90}
-                        label
-                      >
-                        {metrics.translationChartData.map((entry, index) => (
-                          <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </article>
-
-              <article className="chart-card">
-                <h4>Dataset Quality Signals</h4>
-                <div className="chart-wrap">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={metrics.qualityChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#7c3aed" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </article>
-
-              <article className="chart-card">
-                <h4>Top Tokens in Cleaned Text</h4>
-                <div className="chart-wrap">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={metrics.topTokenData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="token" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#0891b2" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </article>
-            </div>
+            <Suspense fallback={<ChartsSkeleton />}>
+              <DataInputCharts
+                languageChartData={metrics.languageChartData}
+                translationChartData={metrics.translationChartData}
+                qualityChartData={metrics.qualityChartData}
+                topTokenData={metrics.topTokenData}
+              />
+            </Suspense>
 
             <h3>Preview (First 20 records)</h3>
             <div className="table-wrap">
@@ -741,12 +990,15 @@ export function DataInputPanel() {
                     <th>Original Text</th>
                     <th>Language</th>
                     <th>Translated</th>
+                    <th>Fake verdict</th>
+                    <th>Risk %</th>
+                    <th>Signals</th>
                   </tr>
                 </thead>
                 <tbody>
                   {previewRecords.length === 0 ? (
                     <tr>
-                      <td colSpan={8}>No records match current filter.</td>
+                      <td colSpan={11}>No records match current filter.</td>
                     </tr>
                   ) : (
                     previewRecords.map((record) => (
@@ -767,6 +1019,7 @@ export function DataInputPanel() {
                             {record.translated ? 'Yes' : 'No'}
                           </span>
                         </td>
+                        {renderFakeCells(record)}
                       </tr>
                     ))
                   )}
@@ -787,12 +1040,15 @@ export function DataInputPanel() {
                     <th>Original Text</th>
                     <th>Language</th>
                     <th>Translated</th>
+                    <th>Fake verdict</th>
+                    <th>Risk %</th>
+                    <th>Signals</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedRecords.length === 0 ? (
                     <tr>
-                      <td colSpan={8}>No records match current filter.</td>
+                      <td colSpan={11}>No records match current filter.</td>
                     </tr>
                   ) : (
                     paginatedRecords.map((record) => (
@@ -813,6 +1069,7 @@ export function DataInputPanel() {
                             {record.translated ? 'Yes' : 'No'}
                           </span>
                         </td>
+                        {renderFakeCells(record)}
                       </tr>
                     ))
                   )}

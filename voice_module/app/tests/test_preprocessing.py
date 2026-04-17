@@ -76,16 +76,35 @@ def test_groq_detect_and_translate_uses_mock_completion() -> None:
     _clear_groq_cache()
     mock_client = MagicMock()
     message = MagicMock()
-    message.content = '{"language":"hi","translated_text":"this is a very good product","translated":true}'
+    message.content = '{"translated_text":"this is a very good product","translated":true}'
     mock_client.chat.completions.create.return_value = MagicMock(
         choices=[MagicMock(message=message)]
     )
-    with patch.object(groq_lang, "_get_groq_client", return_value=mock_client):
-        lang, text, translated = groq_lang.groq_detect_and_translate("unique-hindi-test-xyz bahut accha")
-    assert lang == "hi"
-    assert translated is True
-    assert "good" in text.lower() or "product" in text.lower()
-    mock_client.chat.completions.create.assert_called_once()
+    with patch.object(groq_lang, "_langdetect_available", True):
+        with patch.object(groq_lang, "_get_groq_client", return_value=mock_client):
+            with patch.object(groq_lang, "_fallback_detect_language", return_value="hi"):
+                lang, text, translated = groq_lang.groq_detect_and_translate(
+                    "unique-hindi-test-xyz bahut accha long enough for langdetect path"
+                )
+                assert lang == "hi"
+                assert translated is True
+                assert "good" in text.lower() or "product" in text.lower()
+                mock_client.chat.completions.create.assert_called_once()
+
+
+def test_groq_detect_and_translate_english_skips_groq() -> None:
+    _clear_groq_cache()
+    mock_client = MagicMock()
+    with patch.object(groq_lang, "_langdetect_available", True):
+        with patch.object(groq_lang, "_get_groq_client", return_value=mock_client):
+            with patch.object(groq_lang, "_fallback_detect_language", return_value="en"):
+                lang, text, translated = groq_lang.groq_detect_and_translate(
+                    "The delivery was late and the box was damaged completely here."
+                )
+                assert lang == "en"
+                assert translated is False
+                assert "late" in text.lower()
+                mock_client.chat.completions.create.assert_not_called()
 
 
 def test_preprocess_record_propagates_groq_metadata() -> None:

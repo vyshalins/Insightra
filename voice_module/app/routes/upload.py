@@ -2,15 +2,27 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, File, Form, UploadFile
-from pydantic import BaseModel, Field
+import os
 
-from models.schema import IngestionResponse
+import pandas as pd
+from fastapi import APIRouter, File, Form, UploadFile
+from pydantic import BaseModel, Field, model_validator
+
+from models.schema import (
+    FakeBatchResponse,
+    IngestionResponse,
+    InsightsResponse,
+    ReviewRecord,
+)
 from services.chunking import (
     DEFAULT_CHUNK_SIZE,
     create_session_and_process_first_chunk,
+    get_session,
     process_next_chunk,
 )
+from services.fake_detection.pipeline import analyze_reviews
+from services.insights.pipeline import analyze_insights
+from services.normalizer import normalize_dataframe
 from services.parser import parse_csv, parse_json, parse_manual
 
 router = APIRouter(prefix="/upload", tags=["ingestion"])
@@ -19,6 +31,56 @@ router = APIRouter(prefix="/upload", tags=["ingestion"])
 class NextChunkBody(BaseModel):
     session_id: str
     chunk_size: int | None = Field(default=None, ge=1, le=5000)
+
+
+class ReviewBatchRequest(BaseModel):
+    """Inline reviews from a prior ingestion response, or a chunk session id."""
+
+    reviews: list[ReviewRecord] | None = None
+    session_id: str | None = None
+
+    @model_validator(mode="after")
+    def require_input(self) -> ReviewBatchRequest:
+        has_reviews = bool(self.reviews)
+        has_session = bool(self.session_id and str(self.session_id).strip())
+        if not has_reviews and not has_session:
+            raise ValueError("Provide non-empty `reviews` or a `session_id`.")
+        return self
+
+
+# Backwards-compatible alias for callers / OpenAPI generators.
+FakeAnalyzeRequest = ReviewBatchRequest
+
+
+def _resolve_reviews_batch(body: ReviewBatchRequest, max_rows: int) -> list[ReviewRecord]:
+    if body.reviews:
+        if len(body.reviews) > max_rows:
+            return list(body.reviews)[:max_rows]
+        return list(body.reviews)
+    sid = str(body.session_id).strip()
+    session = get_session(sid)
+    df = pd.DataFrame(session.rows)
+    if len(df) > max_rows:
+        df = df.iloc[:max_rows].copy()
+    reviews, _ = normalize_dataframe(df, source=session.source, dedupe=False)
+    return reviews
+
+
+@router.post("/analyze-fakes", response_model=FakeBatchResponse)
+async def analyze_fakes(body: ReviewBatchRequest) -> FakeBatchResponse:
+    """Hybrid fake review scores (rules + optional RoBERTa + optional SBERT)."""
+    max_rows = int(os.getenv("FAKE_ANALYZE_MAX_ROWS", "2000"))
+    reviews = _resolve_reviews_batch(body, max_rows)
+    results = analyze_reviews(reviews)
+    return FakeBatchResponse(results=results, count=len(results))
+
+
+@router.post("/analyze-insights", response_model=InsightsResponse)
+async def analyze_insights_route(body: ReviewBatchRequest) -> InsightsResponse:
+    """Trends, urgency, bias-adjusted sentiment, and recommendations across time windows."""
+    max_rows = int(os.getenv("INSIGHTS_MAX_ROWS", "2000"))
+    reviews = _resolve_reviews_batch(body, max_rows)
+    return analyze_insights(reviews)
 
 
 @router.post("/csv", response_model=IngestionResponse)

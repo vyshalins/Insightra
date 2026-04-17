@@ -1,13 +1,83 @@
 :root {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color-scheme: light dark;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #111827;
-  background-color: #f8fafc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --color-bg: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-surface-elevated: #f9fafb;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-border: #cbd5e1;
+  --color-border-subtle: #e2e8f0;
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-on-primary: #ffffff;
+  --color-secondary: #334155;
+  --color-secondary-hover: #1e293b;
+  --color-danger: #b91c1c;
+  --color-code-bg: #0f172a;
+  --color-code-fg: #e2e8f0;
+  --color-focus-ring: rgba(37, 99, 235, 0.45);
+  --color-badge-lang-bg: #e2e8f0;
+  --color-badge-lang-fg: #1e293b;
+  --color-badge-yes-bg: #dcfce7;
+  --color-badge-yes-fg: #166534;
+  --color-badge-no-bg: #ffedd5;
+  --color-badge-no-fg: #9a3412;
+  --color-source-badge-bg: #dbeafe;
+  --color-source-badge-fg: #1d4ed8;
+
+  --chart-1: #2563eb;
+  --chart-2: #0891b2;
+  --chart-3: #7c3aed;
+  --chart-4: #f59e0b;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --space-1: 0.5rem;
+  --space-2: 0.75rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-surface-muted: #172554;
+    --color-surface-elevated: #334155;
+    --color-text: #f1f5f9;
+    --color-text-muted: #94a3b8;
+    --color-border: #475569;
+    --color-border-subtle: #334155;
+    --color-primary: #3b82f6;
+    --color-primary-hover: #60a5fa;
+    --color-on-primary: #0f172a;
+    --color-secondary: #cbd5e1;
+    --color-secondary-hover: #e2e8f0;
+    --color-danger: #f87171;
+    --color-code-bg: #020617;
+    --color-code-fg: #e2e8f0;
+    --color-focus-ring: rgba(96, 165, 250, 0.5);
+    --color-badge-lang-bg: #334155;
+    --color-badge-lang-fg: #e2e8f0;
+    --color-badge-yes-bg: #14532d;
+    --color-badge-yes-fg: #bbf7d0;
+    --color-badge-no-bg: #7c2d12;
+    --color-badge-no-fg: #fed7aa;
+    --color-source-badge-bg: #1e3a5f;
+    --color-source-badge-fg: #93c5fd;
+    --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.35);
+  }
 }
 
 * {
@@ -16,4 +86,6 @@
 
 body {
   margin: 0;
+  color: var(--color-text);
+  background-color: var(--color-bg);
 }

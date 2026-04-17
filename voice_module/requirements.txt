@@ -18,3 +18,4 @@ textblob
 nltk
 sentence-transformers
 scikit-learn
+transformers

@@ -29,6 +29,63 @@ export type IngestionResponse = {
   has_more?: boolean
 }
 
+export type FakeReviewResult = {
+  review_id: string
+  is_fake: boolean
+  fake_confidence: number
+  rule_score: number
+  ml_fake_prob?: number | null
+  fake_signals: string[]
+  explanation: string
+  similarity_neighbor: boolean
+}
+
+export type FakeBatchResponse = {
+  results: FakeReviewResult[]
+  count: number
+}
+
+export type TrendFeatureResult = {
+  feature: string
+  prev_rate: number
+  current_rate: number
+  delta: number
+  trend: string
+  classification: string
+  z_score?: number | null
+}
+
+export type UrgencyItem = {
+  feature: string
+  urgency: string
+  score: number
+  action: string
+}
+
+export type BiasSummary = {
+  raw_sentiment: number
+  adjusted_sentiment: number
+  volume_weight: number
+}
+
+export type InsightsMeta = {
+  current_window_size: number
+  previous_window_size: number
+  total_input_reviews: number
+  anomaly_mode: string
+  notes: string
+}
+
+export type InsightsResponse = {
+  trends: TrendFeatureResult[]
+  urgency_score: number
+  urgency_level: string
+  urgency_items: UrgencyItem[]
+  bias: BiasSummary
+  recommendations: string[]
+  meta: InsightsMeta
+}
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:8000'
 
@@ -58,7 +115,7 @@ async function postFormData<T>(path: string, formData: FormData): Promise<T> {
   return (await response.json()) as T
 }
 
-async function postJson<T>(path: string, payload: Record<string, unknown>): Promise<T> {
+async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
     headers: {
@@ -107,4 +164,14 @@ export async function processNextChunk(
     payload.chunk_size = chunkSize
   }
   return await postJson<IngestionResponse>('/upload/chunk/next', payload)
+}
+
+/** Hybrid fake review detection (rules + optional ML + SBERT on backend). */
+export async function analyzeFakeReviews(reviews: ReviewRecord[]): Promise<FakeBatchResponse> {
+  return await postJson<FakeBatchResponse>('/upload/analyze-fakes', { reviews })
+}
+
+/** Trends, urgency, bias-adjusted sentiment, recommendations (time-windowed). */
+export async function analyzeInsights(reviews: ReviewRecord[]): Promise<InsightsResponse> {
+  return await postJson<InsightsResponse>('/upload/analyze-insights', { reviews })
 }

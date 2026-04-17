@@ -37,26 +37,30 @@ function App() {
   }
 
   return (
-    <main className="app">
+    <main className={`app ${activeTab === 'data' ? 'app--wide' : ''}`}>
       <header>
         <h1>Insight Frontend</h1>
         <p>Switch between voice analysis and data ingestion flows.</p>
       </header>
 
-      <div className="app-tabs" role="tablist" aria-label="Application tabs">
+      <div className="app-tabs" role="tablist" aria-label="Application sections">
         <button
+          id="tab-voice"
           type="button"
           role="tab"
           aria-selected={activeTab === 'voice'}
+          aria-controls="panel-voice"
           className={`app-tab-btn ${activeTab === 'voice' ? 'active' : ''}`}
           onClick={() => setActiveTab('voice')}
         >
           Voice Analysis
         </button>
         <button
+          id="tab-data"
           type="button"
           role="tab"
           aria-selected={activeTab === 'data'}
+          aria-controls="panel-data"
           className={`app-tab-btn ${activeTab === 'data' ? 'active' : ''}`}
           onClick={() => setActiveTab('data')}
         >
@@ -64,78 +68,93 @@ function App() {
         </button>
       </div>
 
-      {activeTab === 'voice' ? (
-        <>
-          <section className="card">
-            <h2>Input</h2>
-            <div className="controls">
-              <label htmlFor="audio-file" className="file-label">
-                Select audio file
-              </label>
-              <input
-                id="audio-file"
-                type="file"
-                accept="audio/*,.m4a,.wav,.mp3,.webm"
-                onChange={handleFileChange}
-                disabled={isAnalyzing}
-              />
-            </div>
-            <p className="file-name">
-              Selected: {selectedFile ? selectedFile.name : 'No file selected'}
-            </p>
-            <button type="button" onClick={handleAnalyze} disabled={isAnalyzing}>
-              {isAnalyzing ? 'Analyzing...' : 'Analyze Voice'}
-            </button>
-            {error ? <p className="error-text">{error}</p> : null}
-          </section>
+      <div
+        id="panel-voice"
+        role="tabpanel"
+        aria-labelledby="tab-voice"
+        hidden={activeTab !== 'voice'}
+      >
+        <section className="card">
+          <h2>Input</h2>
+          <div className="controls">
+            <label htmlFor="audio-file" className="file-label">
+              Select audio file
+            </label>
+            <input
+              id="audio-file"
+              type="file"
+              accept="audio/*,.m4a,.wav,.mp3,.webm"
+              onChange={handleFileChange}
+              disabled={isAnalyzing}
+            />
+          </div>
+          <p className="file-name">
+            Selected: {selectedFile ? selectedFile.name : 'No file selected'}
+          </p>
+          <button
+            type="button"
+            onClick={handleAnalyze}
+            disabled={isAnalyzing}
+            aria-busy={isAnalyzing}
+          >
+            {isAnalyzing ? 'Analyzing...' : 'Analyze Voice'}
+          </button>
+          {error ? <p className="error-text">{error}</p> : null}
+        </section>
 
-          <section className="card">
-            <h2>Results</h2>
-            {!result ? (
-              <p className="empty-state">
-                Run analysis to see transcript, emotion, issues, and actions.
-              </p>
-            ) : (
-              <div className="results-grid">
-                <div>
-                  <h3>Transcript</h3>
-                  <p>{result.transcript || 'No transcript returned.'}</p>
-                </div>
-                <div>
-                  <h3>Emotion</h3>
-                  <p>{result.emotion || 'Unknown'}</p>
-                </div>
-                <div>
-                  <h3>Issues</h3>
-                  {result.issues.length > 0 ? (
-                    <ul>
-                      {result.issues.map((issue, index) => (
-                        <li key={`${issue}-${index}`}>{issue}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No issues detected.</p>
-                  )}
-                </div>
-                <div>
-                  <h3>Actions</h3>
-                  {result.actions.length > 0 ? (
-                    <ul>
-                      {result.actions.map((action, index) => (
-                        <li key={`${action}-${index}`}>{action}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No actions generated.</p>
-                  )}
-                </div>
+        <section className="card">
+          <h2>Results</h2>
+          {!result ? (
+            <p className="empty-state">
+              Run analysis to see transcript, emotion, issues, and actions.
+            </p>
+          ) : (
+            <div className="results-grid">
+              <div>
+                <h3>Transcript</h3>
+                <p>{result.transcript || 'No transcript returned.'}</p>
               </div>
-            )}
-          </section>
-        </>
-      ) : (
+              <div>
+                <h3>Emotion</h3>
+                <p>{result.emotion || 'Unknown'}</p>
+              </div>
+              <div>
+                <h3>Issues</h3>
+                {result.issues.length > 0 ? (
+                  <ul>
+                    {result.issues.map((issue, index) => (
+                      <li key={`${issue}-${index}`}>{issue}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No issues detected.</p>
+                )}
+              </div>
+              <div>
+                <h3>Actions</h3>
+                {result.actions.length > 0 ? (
+                  <ul>
+                    {result.actions.map((action, index) => (
+                      <li key={`${action}-${index}`}>{action}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No actions generated.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div
+        id="panel-data"
+        role="tabpanel"
+        aria-labelledby="tab-data"
+        hidden={activeTab !== 'data'}
+      >
         <DataInputPanel />
-      )}
+      </div>
     </main>
   )
 }
