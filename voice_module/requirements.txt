@@ -1,0 +1,9 @@
+# Add Python dependencies here.
+
+openai-whisper
+torch
+fastapi
+uvicorn
+python-multipart
+librosa
+numpy
