@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -11,17 +9,7 @@ from typing import Any
 import pandas as pd
 
 from models.schema import ReviewRecord
-
-
-def clean_text(text: str, *, lowercase: bool = True) -> str:
-    """Remove URLs, strip noise; optional lowercase."""
-    if not text:
-        return ""
-    t = re.sub(r"http\S+", "", str(text))
-    t = re.sub(r"\s+", " ", t).strip()
-    if lowercase:
-        t = t.lower()
-    return t
+from services.preprocessing import dedupe_exact, dedupe_near, preprocess_record
 
 
 def _parse_timestamp(value: Any) -> datetime | None:
@@ -72,16 +60,17 @@ def normalize_dataframe(
     if "text" not in df.columns:
         return [], int(len(df))
 
-    seen_hashes: set[str] = set()
     reviews: list[ReviewRecord] = []
     invalid = 0
+
+    sentence_records: list[dict[str, Any]] = []
 
     for _, row in df.iterrows():
         raw_text = row.get("text", "")
         if pd.isna(raw_text):
             raw_text = ""
-        cleaned = clean_text(str(raw_text), lowercase=lowercase_text)
-        if not cleaned:
+        processed_sentences = preprocess_record({"text": str(raw_text)})
+        if not processed_sentences:
             invalid += 1
             continue
 
@@ -95,22 +84,50 @@ def normalize_dataframe(
         else:
             product_id = str(pid).strip() or "unknown"
 
-        dedupe_key = hashlib.sha256(
-            f"{cleaned}|{ts.isoformat()}".encode("utf-8")
-        ).hexdigest()
-        if dedupe and dedupe_key in seen_hashes:
-            invalid += 1
-            continue
-        if dedupe:
-            seen_hashes.add(dedupe_key)
+        for sentence in processed_sentences:
+            text_value = sentence.sentence.lower() if lowercase_text else sentence.sentence
+            if not text_value:
+                invalid += 1
+                continue
+            sentence_records.append(
+                {
+                    "text": text_value,
+                    "original_text": sentence.original_text,
+                    "detected_language": sentence.detected_language,
+                    "translated": sentence.translated,
+                    "timestamp": ts,
+                    "product_id": product_id,
+                    "preprocessed": sentence,
+                }
+            )
 
+    if not sentence_records:
+        return [], invalid
+
+    if dedupe:
+        preprocessed_items = [item["preprocessed"] for item in sentence_records]
+        deduped_exact, removed_exact = dedupe_exact(preprocessed_items)
+        deduped_near, removed_near = dedupe_near(deduped_exact)
+        invalid += removed_exact + removed_near
+
+        keep_object_ids = {id(item) for item in deduped_near}
+        sentence_records = [
+            item
+            for item in sentence_records
+            if id(item["preprocessed"]) in keep_object_ids
+        ]
+
+    for item in sentence_records:
         reviews.append(
             ReviewRecord(
                 review_id=str(uuid.uuid4()),
-                text=cleaned,
+                text=item["text"],
                 source=source,
-                timestamp=ts,
-                product_id=product_id,
+                timestamp=item["timestamp"],
+                product_id=item["product_id"],
+                original_text=item["original_text"],
+                detected_language=item["detected_language"],
+                translated=item["translated"],
             )
         )
 

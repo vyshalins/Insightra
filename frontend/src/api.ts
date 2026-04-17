@@ -11,6 +11,9 @@ export type ReviewRecord = {
   source: string
   timestamp: string
   product_id: string
+  original_text?: string | null
+  detected_language?: string | null
+  translated?: boolean
 }
 
 export type IngestionResponse = {
@@ -18,6 +21,12 @@ export type IngestionResponse = {
   source: string
   count: number
   invalid_rows: number
+  session_id?: string | null
+  total_rows?: number
+  processed_rows?: number
+  remaining_rows?: number
+  chunk_size?: number
+  has_more?: boolean
 }
 
 const API_BASE_URL =
@@ -87,4 +96,15 @@ export async function uploadManual(text: string): Promise<IngestionResponse> {
 
 export async function fetchYoutube(url: string): Promise<IngestionResponse> {
   return await postJson<IngestionResponse>('/fetch/youtube', { url })
+}
+
+export async function processNextChunk(
+  sessionId: string,
+  chunkSize?: number,
+): Promise<IngestionResponse> {
+  const payload: Record<string, unknown> = { session_id: sessionId }
+  if (chunkSize) {
+    payload.chunk_size = chunkSize
+  }
+  return await postJson<IngestionResponse>('/upload/chunk/next', payload)
 }

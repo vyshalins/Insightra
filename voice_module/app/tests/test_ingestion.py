@@ -34,6 +34,7 @@ def test_parse_csv_and_normalize() -> None:
     assert reviews[0].text == "hello world"
     assert reviews[0].product_id == "p1"
     assert reviews[0].source == "csv"
+    assert reviews[0].detected_language is not None
 
 
 def test_parse_csv_missing_text_column_raises() -> None:
@@ -63,6 +64,11 @@ def test_upload_csv_endpoint(ingestion_client: TestClient) -> None:
     assert data["count"] == 1
     assert len(data["reviews"]) == 1
     assert data["reviews"][0]["text"] == "review one"
+    assert "translated" in data["reviews"][0]
+    assert data["total_rows"] == 1
+    assert data["processed_rows"] == 1
+    assert data["remaining_rows"] == 0
+    assert data["has_more"] is False
 
 
 def test_upload_csv_empty_returns_400(ingestion_client: TestClient) -> None:
@@ -128,3 +134,57 @@ def test_dedupe_normalize() -> None:
     reviews, invalid = normalize_dataframe(df, source="csv")
     assert len(reviews) == 1
     assert invalid == 1
+
+
+def test_sentence_segmentation_expands_rows() -> None:
+    df = pd.DataFrame([{"text": "delivery was late. product damaged"}])
+    reviews, invalid = normalize_dataframe(df, source="csv")
+    assert invalid == 0
+    assert len(reviews) >= 2
+
+
+def test_large_upload_processes_first_300_rows_then_next_chunk(
+    ingestion_client: TestClient,
+) -> None:
+    rows = ["text"] + [f"row-{idx}" for idx in range(700)]
+    csv_bytes = ("\n".join(rows)).encode("utf-8")
+    first = ingestion_client.post(
+        "/upload/csv",
+        files={"file": ("large.csv", io.BytesIO(csv_bytes), "text/csv")},
+    )
+    assert first.status_code == 200
+    first_payload = first.json()
+    assert first_payload["total_rows"] == 700
+    assert first_payload["processed_rows"] == 300
+    assert first_payload["remaining_rows"] == 400
+    assert first_payload["has_more"] is True
+    assert first_payload["session_id"]
+    assert 1 <= first_payload["count"] <= 300
+
+    second = ingestion_client.post(
+        "/upload/chunk/next",
+        json={"session_id": first_payload["session_id"], "chunk_size": 300},
+    )
+    assert second.status_code == 200
+    second_payload = second.json()
+    assert second_payload["processed_rows"] == 600
+    assert second_payload["remaining_rows"] == 100
+    assert second_payload["has_more"] is True
+
+    third = ingestion_client.post(
+        "/upload/chunk/next",
+        json={"session_id": first_payload["session_id"], "chunk_size": 300},
+    )
+    assert third.status_code == 200
+    third_payload = third.json()
+    assert third_payload["processed_rows"] == 700
+    assert third_payload["remaining_rows"] == 0
+    assert third_payload["has_more"] is False
+
+
+def test_next_chunk_unknown_session_returns_404(ingestion_client: TestClient) -> None:
+    response = ingestion_client.post(
+        "/upload/chunk/next",
+        json={"session_id": "missing-session", "chunk_size": 300},
+    )
+    assert response.status_code == 404

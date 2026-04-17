@@ -11,3 +11,10 @@ pandas
 google-api-python-client
 pytest
 httpx
+emoji
+langdetect
+groq
+textblob
+nltk
+sentence-transformers
+scikit-learn

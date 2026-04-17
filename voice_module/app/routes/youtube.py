@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from helpers import extract_video_id
 from models.schema import IngestionResponse
-from services.normalizer import normalize_dataframe
+from services.chunking import DEFAULT_CHUNK_SIZE, create_session_and_process_first_chunk
 from services.youtube_service import get_youtube_comments
 
 router = APIRouter(prefix="/fetch", tags=["ingestion"])
@@ -29,10 +29,6 @@ async def fetch_youtube(body: YouTubeFetchBody) -> IngestionResponse:
 
     rows = get_youtube_comments(video_id)
     df = pd.DataFrame(rows)
-    reviews, invalid = normalize_dataframe(df, source="youtube")
-    return IngestionResponse(
-        reviews=reviews,
-        source="youtube",
-        count=len(reviews),
-        invalid_rows=invalid,
+    return create_session_and_process_first_chunk(
+        df, source="youtube", chunk_size=DEFAULT_CHUNK_SIZE
     )

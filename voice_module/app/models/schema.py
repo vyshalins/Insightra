@@ -16,6 +16,15 @@ class ReviewRecord(BaseModel):
     source: str
     timestamp: datetime
     product_id: str = Field(default="unknown")
+    original_text: str | None = Field(
+        default=None, description="Raw review text before preprocessing"
+    )
+    detected_language: str | None = Field(
+        default=None, description="Detected language code (ISO-like)"
+    )
+    translated: bool = Field(
+        default=False, description="True when text was translated to English"
+    )
 
     @field_validator("text", mode="before")
     @classmethod
@@ -42,4 +51,19 @@ class IngestionResponse(BaseModel):
     invalid_rows: int = Field(
         default=0,
         description="Rows skipped (empty text after cleaning, duplicates, etc.)",
+    )
+    session_id: str | None = Field(
+        default=None,
+        description="Chunk-processing session id for loading remaining rows",
+    )
+    total_rows: int = Field(default=0, description="Total rows in uploaded dataset")
+    processed_rows: int = Field(
+        default=0, description="Rows processed so far in current chunk session"
+    )
+    remaining_rows: int = Field(
+        default=0, description="Rows not processed yet in current chunk session"
+    )
+    chunk_size: int = Field(default=300, description="Chunk size used for processing")
+    has_more: bool = Field(
+        default=False, description="True when additional rows are available to process"
     )

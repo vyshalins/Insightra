@@ -69,6 +69,10 @@
   margin-bottom: 1rem;
 }
 
+.analytics-summary-grid {
+  margin-bottom: 1rem;
+}
+
 .summary-card {
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
@@ -106,6 +110,34 @@
   align-items: end;
 }
 
+.chunk-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.chunk-controls label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.chunk-controls input {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font: inherit;
+  width: 140px;
+}
+
+.chunk-status {
+  margin: 0;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
 .dataset-controls label {
   display: grid;
   gap: 0.4rem;
@@ -118,6 +150,29 @@
   flex-wrap: wrap;
 }
 
+.charts-grid {
+  margin: 0.75rem 0 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.chart-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: #ffffff;
+}
+
+.chart-card h4 {
+  margin: 0 0 0.5rem;
+}
+
+.chart-wrap {
+  width: 100%;
+  height: 240px;
+}
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid #e5e7eb;
@@ -126,7 +181,7 @@
 
 .table-wrap table {
   width: 100%;
-  min-width: 900px;
+  min-width: 1300px;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -164,4 +219,24 @@
   background: #111827;
   color: #e5e7eb;
   font-size: 0.85rem;
+}
+
+.data-chip {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  background: #e2e8f0;
+}
+
+.chip-yes {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.chip-no {
+  color: #9a3412;
+  background: #ffedd5;
 }

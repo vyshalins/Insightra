@@ -32,6 +32,33 @@ YouTube: set environment variable `YOUTUBE_API_KEY` before calling `/fetch/youtu
 
 Sample CSV: [samples/reviews_sample.csv](samples/reviews_sample.csv).
 
+## Preprocessing layer (ingestion pipeline)
+
+All ingestion routes feed the same preprocessing pipeline in this strict order:
+
+1. basic cleaning (lowercase, URL/html removal, whitespace cleanup, emoji aliasing)
+2. language detection and English translation (Groq when configured)
+3. spell correction
+4. sentence segmentation
+5. exact + near-duplicate removal
+
+### Groq (language + translation)
+
+Set in `voice_module/.env` (or the process environment):
+
+- `GROQ_API_KEY` — required for Groq-based detection + translation in one JSON response.
+- `GROQ_MODEL` — optional; defaults to `llama-3.1-8b-instant` if unset.
+
+If `GROQ_API_KEY` is missing or Groq errors, the pipeline falls back to **langdetect** for `detected_language` only and **does not translate** (`translated` stays false). Ingestion remains synchronous; large batches may hit Groq rate limits.
+
+Output records include optional traceability metadata:
+
+- `original_text`
+- `detected_language`
+- `translated`
+
+Near-duplicate removal uses Sentence-BERT when available, with a safe string-similarity fallback.
+
 ### Tests
 
 From `voice_module/app`:
@@ -72,6 +99,7 @@ VITE_API_BASE_URL=http://localhost:8000
 - `app/routes/upload.py` - CSV / JSON / manual upload routes
 - `app/routes/youtube.py` - YouTube comments route
 - `app/services/parser.py` - Parse uploads to DataFrames
+- `app/services/groq_lang.py` - Groq JSON language detection + translation
 - `app/services/normalizer.py` - Clean + normalize to unified schema
 - `app/services/youtube_service.py` - YouTube Data API client
 - `app/models/schema.py` - Pydantic models for ingestion responses
