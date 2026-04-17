@@ -7,3 +7,7 @@ uvicorn
 python-multipart
 librosa
 numpy
+pandas
+google-api-python-client
+pytest
+httpx

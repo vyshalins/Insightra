@@ -1,0 +1,4 @@
+text,timestamp,product_id
+"The delivery was fast and the product works well.",2026-04-17T10:00:00Z,SKU-001
+"Packaging was damaged but item is OK.",2026-04-17T11:30:00Z,SKU-001
+"Would not recommend — stopped working after a week.",2026-04-18T09:15:00Z,SKU-002
