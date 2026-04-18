@@ -8,6 +8,7 @@ import pandas as pd
 from fastapi import APIRouter, File, Form, UploadFile
 from pydantic import BaseModel, Field, model_validator
 
+from mlflow_tracker import tracker
 from models.schema import (
     FakeBatchResponse,
     IngestionResponse,
@@ -71,7 +72,13 @@ async def analyze_fakes(body: ReviewBatchRequest) -> FakeBatchResponse:
     """Hybrid fake review scores (rules + optional RoBERTa + optional SBERT)."""
     max_rows = int(os.getenv("FAKE_ANALYZE_MAX_ROWS", "2000"))
     reviews = _resolve_reviews_batch(body, max_rows)
-    results = analyze_reviews(reviews)
+    with tracker.run(
+        run_name="fake_detection_run",
+        tags={"pipeline": "fake_detection", "source": body.session_id or "inline"},
+    ):
+        tracker.log_param("model_type", "rule_based+roberta+sbert")
+        tracker.log_param("dataset_size", len(reviews))
+        results = analyze_reviews(reviews)
     return FakeBatchResponse(results=results, count=len(results))
 
 
@@ -80,7 +87,12 @@ async def analyze_insights_route(body: ReviewBatchRequest) -> InsightsResponse:
     """Trends, urgency, bias-adjusted sentiment, and recommendations across time windows."""
     max_rows = int(os.getenv("INSIGHTS_MAX_ROWS", "2000"))
     reviews = _resolve_reviews_batch(body, max_rows)
-    return analyze_insights(reviews)
+    with tracker.run(
+        run_name="insights_analysis_run",
+        tags={"pipeline": "insights", "source": body.session_id or "inline"},
+    ):
+        response = analyze_insights(reviews)
+    return response
 
 
 @router.post("/csv", response_model=IngestionResponse)

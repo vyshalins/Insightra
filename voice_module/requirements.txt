@@ -19,3 +19,4 @@ nltk
 sentence-transformers
 scikit-learn
 transformers
+mlflow

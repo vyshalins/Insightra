@@ -10,6 +10,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
+from mlflow_tracker import tracker
 from services.groq_context import groq_review_context
 from services.groq_lang import groq_detect_and_translate
 
@@ -143,6 +144,36 @@ def preprocess_record(review: dict[str, Any]) -> list[PreprocessedText]:
         )
         for sentence in sentences
     ]
+
+
+def log_preprocessing_stats(
+    raw_count: int,
+    cleaned_count: int,
+    duplicates_removed: int,
+    translated_count: int,
+) -> None:
+    """
+    Log batch-level preprocessing statistics to the active MLflow run.
+
+    Call this once per ingestion batch after all records are processed::
+
+        from services.preprocessing import log_preprocessing_stats
+        log_preprocessing_stats(
+            raw_count=200,
+            cleaned_count=195,
+            duplicates_removed=12,
+            translated_count=37,
+        )
+    """
+    tracker.log_metrics({
+        "preprocess_raw_reviews": float(raw_count),
+        "preprocess_cleaned_reviews": float(cleaned_count),
+        "preprocess_duplicates_removed": float(duplicates_removed),
+        "preprocess_translated_reviews": float(translated_count),
+        "preprocess_retention_rate": (
+            round(cleaned_count / raw_count, 4) if raw_count else 0.0
+        ),
+    })
 
 
 def dedupe_exact(records: list[PreprocessedText]) -> tuple[list[PreprocessedText], int]:

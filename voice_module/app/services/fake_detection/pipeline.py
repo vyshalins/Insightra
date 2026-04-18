@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from mlflow_tracker import tracker
 from models.schema import FakeReviewResult, ReviewRecord
 from services.fake_detection import fusion
 from services.fake_detection.roberta_model import predict_fake_probabilities
@@ -50,5 +51,18 @@ def analyze_reviews(reviews: list[ReviewRecord]) -> list[FakeReviewResult]:
                 similarity_neighbor=sim_hit,
             )
         )
+
+    # ── MLflow: log fake-detection aggregate metrics ──────────────────────────
+    total = len(results)
+    fake_count = sum(1 for r in results if r.is_fake)
+    sim_hits = sum(1 for f in sim_flags if f)
+    tracker.log_metrics({
+        "fake_detection_total_reviewed": float(total),
+        "fake_count": float(fake_count),
+        "fake_rate": round(fake_count / total, 4) if total else 0.0,
+        "similarity_hits": float(sim_hits),
+        "ml_model_used": float(ml_used),
+    })
+    # ─────────────────────────────────────────────────────────────────────────
 
     return results

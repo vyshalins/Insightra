@@ -43,6 +43,12 @@ class ReviewRecord(BaseModel):
         le=1.0,
         description="Optional Groq context confidence (calibrated with a simple clarity heuristic)",
     )
+    verified_purchase: bool = Field(
+        default=False,
+        description="True when the reviewer is a confirmed buyer (e.g. Amazon Verified Purchase). "
+                    "Used by the bias adjuster to derive a data-driven sentiment prior instead of "
+                    "assuming neutral — corrects for the over-representation of unhappy reviewers.",
+    )
 
     @field_validator("text", mode="before")
     @classmethod
@@ -117,8 +123,18 @@ class BiasSummary(BaseModel):
     """Sentiment shrinkage and volume confidence."""
 
     raw_sentiment: float = Field(description="Mean polarity in current window (-1..1)")
-    adjusted_sentiment: float = Field(description="Bayesian-shrunk mean toward neutral")
+    adjusted_sentiment: float = Field(description="Bayesian-shrunk mean; pulled toward verified-buyer prior")
     volume_weight: float = Field(ge=0.0, le=1.0, description="Reliability weight from sample size")
+    verified_prior: float = Field(
+        default=0.0,
+        description="Prior used for shrinkage: mean sentiment of verified buyers, "
+                    "or INSIGHTS_BIAS_NEUTRAL_PRIOR (default 0.0) when none exist.",
+    )
+    verified_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of verified-purchase reviews that contributed to the prior.",
+    )
 
 
 class InsightsMeta(BaseModel):

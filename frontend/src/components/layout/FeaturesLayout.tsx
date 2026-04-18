@@ -69,12 +69,6 @@ export function FeaturesLayout() {
           </div>
 
           <div className="features-rail__bottom">
-            <button type="button" className="features-rail__theme" disabled title="Dark mode (coming soon)">
-              <span className="features-rail__theme-label">Dark mode</span>
-              <span className="features-rail__theme-track" aria-hidden="true">
-                <span className="features-rail__theme-knob" />
-              </span>
-            </button>
             <Link to="/" className="features-rail__back">
               Back to site
             </Link>

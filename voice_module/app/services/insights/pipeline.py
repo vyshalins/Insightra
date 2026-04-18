@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 
+from mlflow_tracker import tracker
+
 from models.schema import (
     BiasSummary,
     InsightsMeta,
@@ -11,7 +13,7 @@ from models.schema import (
     ReviewRecord,
 )
 from services.fake_detection.pipeline import analyze_reviews
-from services.insights.bias import shrink_mean, volume_weight
+from services.insights.bias import compute_verified_prior, shrink_mean, volume_weight
 from services.insights.absa import build_aspect_sentiment_windows
 from services.insights.bucketing import split_windows
 from services.insights.features import window_feature_rates
@@ -28,6 +30,17 @@ from services.insights.urgency import (
 def analyze_insights(reviews: list[ReviewRecord]) -> InsightsResponse:
     window = int(os.getenv("INSIGHTS_WINDOW_SIZE", "50"))
     anomaly_mode = os.getenv("INSIGHTS_ANOMALY_MODE", "none").strip().lower()
+
+    # ── MLflow: log pipeline parameters ──────────────────────────────────────
+    tracker.log_params({
+        "model_type": "rule_based+roberta",
+        "dataset_size": len(reviews),
+        "window_size": window,
+        "anomaly_mode": anomaly_mode,
+        "preprocessing_steps": "cleaning,translation,deduplication",
+        "fake_detection_enabled": os.getenv("INSIGHTS_USE_FAKE", "0").strip() == "1",
+    })
+    # ─────────────────────────────────────────────────────────────────────────
 
     previous, current = split_windows(reviews, window)
     prev_rates = window_feature_rates(previous)
@@ -48,7 +61,12 @@ def analyze_insights(reviews: list[ReviewRecord]) -> InsightsResponse:
 
     raw_mean = mean_polarity(current)
     n_curr = len(current)
-    adjusted = shrink_mean(raw_mean, n_curr)
+
+    # ── Derive prior from verified buyers in the current window ──────────────
+    verified_prior, verified_count = compute_verified_prior(current)
+    # ────────────────────────────────────────────────────────────
+
+    adjusted = shrink_mean(raw_mean, n_curr, prior=verified_prior)
     vol_w = volume_weight(n_curr)
 
     meta = InsightsMeta(
@@ -78,6 +96,27 @@ def analyze_insights(reviews: list[ReviewRecord]) -> InsightsResponse:
     recommendations = generate_recommendations(summary, top_preview)
     aspect_sentiment = build_aspect_sentiment_windows(previous, current)
 
+    # ── MLflow: log computed metrics ──────────────────────────────────────────
+    tracker.log_metrics({
+        "urgency_score": round(urgency_score, 4),
+        "negative_fraction": round(neg_frac, 4),
+        "fake_rate": round(fake_rate, 4),
+        "raw_sentiment": round(raw_mean, 4),
+        "adjusted_sentiment": round(adjusted, 4),
+        "volume_weight": round(vol_w, 4),
+        "max_abs_trend_delta": round(max_abs_delta, 4),
+        "current_window_size": float(len(current)),
+        "previous_window_size": float(len(previous)),
+        "total_reviews": float(len(reviews)),
+        "total_trends_detected": float(len(trends)),
+        "urgency_items_count": float(len(urgency_items)),
+        "verified_prior": round(verified_prior, 4),
+        "verified_buyer_count": float(verified_count),
+    })
+    tracker.set_tag("urgency_level", urgency_level)
+    tracker.set_tag("bias_prior_source", "verified_buyers" if verified_count > 0 else "neutral_fallback")
+    # ─────────────────────────────────────────────────────────────────────────
+
     return InsightsResponse(
         trends=trends,
         urgency_score=round(urgency_score, 2),
@@ -87,6 +126,8 @@ def analyze_insights(reviews: list[ReviewRecord]) -> InsightsResponse:
             raw_sentiment=round(raw_mean, 4),
             adjusted_sentiment=round(adjusted, 4),
             volume_weight=round(vol_w, 4),
+            verified_prior=round(verified_prior, 4),
+            verified_count=verified_count,
         ),
         recommendations=recommendations,
         meta=meta,
